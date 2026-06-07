@@ -10,7 +10,7 @@ const KAVITA_DATA = [
     title: " दाजु बहिनी संवाद ",
     category: "kavita",
     tags: ["विवाहार", "मनाेचिन्तन", "छन्द इन्द्रव्रजा"],
-    cover: "file_000000005e1471fa8ac5f67a616fd1a4.png ", // "covers/k001.jpg" राख्नुस् - नभए emoji देखिन्छ
+    cover: "covers/file_000000005e1471fa8ac5f67a616fd1a4.png ", // "covers/k001.jpg" राख्नुस् - नभए emoji देखिन्छ
     coverEmoji: "💁🙇‍♀️",
     date: "2024-12-01",
     readTime: "३ मिनेट",
