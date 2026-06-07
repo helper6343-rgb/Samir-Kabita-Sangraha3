@@ -9,7 +9,7 @@ const KAVITA_DATA = [
     id: "k001",
     title: "दाजु बहिनी संवाद",
     category: "kavita",
-    tags: ["बिवाह", "],
+    tags: ["बिवाह"],
     cover: " covers/1776177925119.png", // "covers/k001.jpg" राख्नुस् - नभए emoji देखिन्छ
     coverEmoji: "🏔️",
     date: "2024-12-01",
