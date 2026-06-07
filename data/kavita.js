@@ -93,7 +93,7 @@ const KAVITA_DATA = [
     title: "हाम्राे गुरुकूल ",
     category: "kavita",
     tags: ["गुरुशिक्षा", "मुस्कान", "छन्द शार्दूलविक्रीडित"],
-    cover: "covers/1776176711764.png",
+    cover: "covers/file_00000000048071fab8ce460b753105d5.png",
     coverEmoji: "🌙",
     date: "2025-01-10",
     readTime: "२ मिनेट",
