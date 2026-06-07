@@ -1,7 +1,7 @@
 {
-  "name": "प्रतीक साहित्य संग्रह",
-  "short_name": "प्रतीक साहित्य",
-  "description": "प्रतीक थापाको कविता, लेख र गजलको डिजिटल सङ्ग्रह",
+  "name": "समीर काव्य संग्रह ",
+  "short_name": "समीर  साहित्य",
+  "description": "समीर कविता, लेख र गजलको डिजिटल सङ्ग्रह",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1e1432",
