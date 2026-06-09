@@ -130,7 +130,7 @@ const KAVITA_DATA = [
     title: "सपनी पछिकाे विपनी",
     category: "kavita",
     tags: ["आकर्षण", "माया", "गद्य प्रयास"],
-    cover: "covers/k007.png",
+    cover: "covers/file_000000000fc871f597d1c8500a69c6f1.png",
     coverEmoji: "❤️",
     date: "2025-02-14",
     readTime: "४ मिनेट",
