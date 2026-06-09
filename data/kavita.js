@@ -167,7 +167,7 @@ const KAVITA_DATA = [
     title: "व्यावहारिक ज्ञान",
     category: "lekh",
     tags: ["ज्ञानका कुरा", "विचार विमर्स", "अणुकथा प्रयास"],
-    cover: "",
+    cover: "covers/bebaharikgyan1456.png",
     coverEmoji: "📚",
     date: "2025-01-20",
     readTime: "७ मिनेट",
