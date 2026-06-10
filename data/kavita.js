@@ -187,7 +187,7 @@ const KAVITA_DATA = [
     category: "muktak",
     tags: ["सम्झना", "फुल", "मुक्तक प्रयास"],
     cover: "",
-    coverEmoji: "covers/khemuktak.png",
+    coverEmoji: "covers/Screenshot_20260610_073905_Gallery.jpg",
     date: "2025-03-05",
     readTime: "३ मिनेट",
     featured: false,
