@@ -187,7 +187,7 @@ const KAVITA_DATA = [
     category: "muktak",
     tags: ["सम्झना", "फुल", "मुक्तक प्रयास"],
     cover: "covers/himalpahadtarai12.png",
-    coverEmoji: "😜",
+    coverEmoji: "😍",
     date: "2025-03-05",
     readTime: "३ मिनेट",
     featured: false,
