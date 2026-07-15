@@ -114,10 +114,47 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTags();
   renderCards();
   startHeroAuto();
+  setupHeroSwipe();
   setupTabs();
   setupMenu();
   startClock();
 });
+
+// ===== BACK बटन / HISTORY व्यवस्थापन =====
+// जब पनि कुनै overlay (कविता, बुकमार्क, सर्च, सेयर) खुल्छ, browser history मा
+// एउटा state थपिन्छ। यसले गर्दा phone/browser को Back थिच्दा वा back-swipe गर्दा
+// app नै बन्द नभई खुला भएको overlay मात्र बन्द भई home स्क्रिनमा फर्किन्छ।
+function openOverlay(name) {
+  history.pushState({ overlay: name }, '');
+}
+
+// popstate ले नै वास्तविक UI लुकाउने काम गर्छ — यसले भर्खरै खुलेको (topmost)
+// overlay मात्र बन्द गर्छ, तल भएका अरू overlay (जस्तै Poem भित्र Share) छोइँदैन
+window.addEventListener('popstate', hideTopOverlay);
+
+function hideTopOverlay() {
+  const shareModal = document.getElementById('shareModal');
+  const poemModal = document.getElementById('poemModal');
+  const bookmarkModal = document.getElementById('bookmarkModal');
+  const searchWrap = document.getElementById('searchBarWrap');
+
+  if (shareModal.classList.contains('open')) {
+    shareModal.classList.remove('open');
+    return;
+  }
+  if (poemModal.classList.contains('open')) {
+    _hidePoemModal();
+    return;
+  }
+  if (bookmarkModal.classList.contains('open')) {
+    _hideBookmarkModal();
+    return;
+  }
+  if (searchWrap.classList.contains('open')) {
+    _hideSearchBar();
+    return;
+  }
+}
 
 // ===== HERO SLIDES =====
 function renderHero() {
@@ -153,10 +190,80 @@ function goToSlide(index) {
 }
 
 function startHeroAuto() {
+  clearInterval(heroInterval); // पुरानो interval भए रोक्ने (नत्र धेरै interval एकैसाथ चल्न सक्छ)
   heroInterval = setInterval(() => {
     heroIndex = (heroIndex + 1) % (heroSlides.length || 1);
     goToSlide(heroIndex);
   }, 4000);
+}
+
+// ===== HERO MANUAL SWIPE (touch + mouse) =====
+// हेडर मुनिको फोटो स्लाइडर अहिलेसम्म auto मात्र स्वाइप हुन्थ्यो, औंलाले/माउसले
+// manually स्वाइप गर्न मिल्दैनथ्यो। यसले त्यो सुविधा थप्छ।
+function setupHeroSwipe() {
+  const container = document.getElementById('heroSlides');
+  if (!container) return;
+
+  let dragging = false;
+  let startX = 0;
+  let deltaX = 0;
+  let slideWidth = 0;
+  let moved = false;
+
+  function dragStart(e) {
+    dragging = true;
+    moved = false;
+    startX = (e.touches ? e.touches[0].clientX : e.clientX);
+    deltaX = 0;
+    const slideEl = container.querySelector('.hero-slide');
+    slideWidth = (slideEl && slideEl.offsetWidth) || container.offsetWidth || 1;
+    container.style.transition = 'none';
+    clearInterval(heroInterval); // manually स्वाइप गर्दा auto-swipe रोक्ने
+  }
+
+  function dragMove(e) {
+    if (!dragging) return;
+    const clientX = (e.touches ? e.touches[0].clientX : e.clientX);
+    deltaX = clientX - startX;
+    if (Math.abs(deltaX) > 5) moved = true;
+    container.style.transform = `translateX(calc(-${heroIndex * 100}% + ${deltaX}px))`;
+  }
+
+  function dragEnd() {
+    if (!dragging) return;
+    dragging = false;
+    container.style.transition = '';
+
+    const threshold = slideWidth * 0.15; // कम्तिमा १५% स्वाइप भए मात्र स्लाइड बदल्ने
+    const total = heroSlides.length || 1;
+
+    if (deltaX <= -threshold) {
+      heroIndex = (heroIndex + 1) % total;
+    } else if (deltaX >= threshold) {
+      heroIndex = (heroIndex - 1 + total) % total;
+    }
+    goToSlide(heroIndex);
+    startHeroAuto(); // फेरि auto-swipe सुरु गर्ने
+
+    if (moved) {
+      // स्वाइप पछि लाग्ने click ले गल्तिले कविता नखोलोस् भनेर एक पटकको click रोक्ने
+      const suppressClick = ev => {
+        ev.stopPropagation();
+        ev.preventDefault();
+        container.removeEventListener('click', suppressClick, true);
+      };
+      container.addEventListener('click', suppressClick, true);
+    }
+  }
+
+  container.addEventListener('touchstart', dragStart, { passive: true });
+  container.addEventListener('touchmove', dragMove, { passive: true });
+  container.addEventListener('touchend', dragEnd);
+  container.addEventListener('touchcancel', dragEnd);
+
+  container.addEventListener('mousedown', dragStart);
+  document.addEventListener('mousemove', dragMove);
+  document.addEventListener('mouseup', dragEnd);
 }
 
 // ===== TAGS =====
@@ -257,6 +364,7 @@ function openPoem(id) {
   const poem = KAVITA_DATA.find(p => p.id === id);
   if (!poem) return;
   currentPoem = poem;
+  const alreadyOpen = document.getElementById('poemModal').classList.contains('open');
 
   document.getElementById('bookmarkBtn').textContent = isBookmarked(poem.id) ? '🔖' : '🏷️';
 
@@ -288,9 +396,15 @@ function openPoem(id) {
 
   document.getElementById('poemModal').classList.add('open');
   document.body.style.overflow = 'hidden';
+  if (!alreadyOpen) openOverlay('poem');
 }
 
 function closeModal() {
+  if (!document.getElementById('poemModal').classList.contains('open')) return;
+  history.back(); // popstate ले _hidePoemModal() चलाउँछ
+}
+
+function _hidePoemModal() {
   document.getElementById('poemModal').classList.remove('open');
   document.body.style.overflow = '';
   currentPoem = null;
@@ -344,5 +458,3 @@ function setupMenu() {
 function closeDropdown() {
   document.getElementById('dropdownMenu').classList.remove('open');
 }
-
-window.addEventListener('popstate',function(){ if(window.closePoem){closePoem();}});

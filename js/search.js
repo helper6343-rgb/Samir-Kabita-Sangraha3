@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   toggleBtn.addEventListener('click', () => {
     wrap.classList.add('open');
+    openOverlay('search');
     setTimeout(() => input.focus(), 200);
   });
 
@@ -25,9 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function closeSearch() {
-    wrap.classList.remove('open');
-    input.value = '';
-    results.innerHTML = '';
+    if (!wrap.classList.contains('open')) return;
+    history.back(); // popstate ले _hideSearchBar() चलाउँछ
   }
 
   function doSearch(query) {
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     results.innerHTML = found.map(p => `
-      <div class="search-result-item" onclick="closeSearch(); openPoem('${p.id}')">
+      <div class="search-result-item" onclick="goToPoemFromSearch('${p.id}')">
         <div class="search-result-cover" style="background:linear-gradient(135deg,#1a2744,#e8690a);display:flex;align-items:center;justify-content:center;font-size:24px;">
           ${p.cover ? `<img src="${p.cover}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" />` : p.coverEmoji}
         </div>
@@ -57,14 +57,21 @@ document.addEventListener('DOMContentLoaded', () => {
     `).join('');
   }
 
-  function closeSearch() {
-    wrap.classList.remove('open');
-    input.value = '';
-    results.innerHTML = '';
-  }
-
   window.closeSearch = closeSearch;
 });
+
+// खोजी सूचीबाट सिधै कविता खोल्ने — सर्च UI लाई history नबदली सिधै लुकाएर
+// त्यसपछि कविता खोल्ने (यसले back button लाई सही तरिकाले काम गराउँछ)
+function goToPoemFromSearch(id) {
+  _hideSearchBar();
+  openPoem(id);
+}
+
+function _hideSearchBar() {
+  document.getElementById('searchBarWrap').classList.remove('open');
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchResults').innerHTML = '';
+}
 
 function highlightMatch(text, query) {
   const regex = new RegExp(`(${query})`, 'gi');

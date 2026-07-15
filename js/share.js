@@ -2,10 +2,12 @@
 
 function sharePoem() {
   document.getElementById('shareModal').classList.add('open');
+  openOverlay('share');
 }
 
 function closeShareModal() {
-  document.getElementById('shareModal').classList.remove('open');
+  if (!document.getElementById('shareModal').classList.contains('open')) return;
+  history.back(); // popstate ले shareModal लुकाउँछ
 }
 
 function getShareText() {

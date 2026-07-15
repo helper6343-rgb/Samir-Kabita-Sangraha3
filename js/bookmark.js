@@ -29,6 +29,7 @@ function toggleBookmark() {
 
 function showBookmarks() {
   closeDropdown();
+  const alreadyOpen = document.getElementById('bookmarkModal').classList.contains('open');
   const bookmarks = getBookmarks();
   const saved = KAVITA_DATA.filter(p => bookmarks.includes(p.id));
   const body = document.getElementById('bookmarkBody');
@@ -37,7 +38,7 @@ function showBookmarks() {
     body.innerHTML = `<div class="empty-state"><div class="icon">🔖</div><p>अहिलेसम्म केही सेभ गर्नुभएको छैन</p></div>`;
   } else {
     body.innerHTML = saved.map(p => `
-      <div class="search-result-item" onclick="closeBookmarkModal(); openPoem('${p.id}')">
+      <div class="search-result-item" onclick="goToPoemFromBookmark('${p.id}')">
         <div class="search-result-cover" style="background:linear-gradient(135deg,#1a2744,#e8690a);display:flex;align-items:center;justify-content:center;font-size:24px;border-radius:6px;width:44px;height:60px;flex-shrink:0;">
           ${p.cover ? `<img src="${p.cover}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" />` : p.coverEmoji}
         </div>
@@ -52,6 +53,14 @@ function showBookmarks() {
 
   document.getElementById('bookmarkModal').classList.add('open');
   document.body.style.overflow = 'hidden';
+  if (!alreadyOpen) openOverlay('bookmarks');
+}
+
+// बुकमार्क सूचीबाट सिधै कविता खोल्ने — बुकमार्क UI लाई history नबदली सिधै लुकाएर
+// त्यसपछि कविता खोल्ने (यसले back button लाई सही तरिकाले काम गराउँछ)
+function goToPoemFromBookmark(id) {
+  _hideBookmarkModal();
+  openPoem(id);
 }
 
 function removeBookmark(id) {
@@ -62,6 +71,11 @@ function removeBookmark(id) {
 }
 
 function closeBookmarkModal() {
+  if (!document.getElementById('bookmarkModal').classList.contains('open')) return;
+  history.back(); // popstate ले _hideBookmarkModal() चलाउँछ
+}
+
+function _hideBookmarkModal() {
   document.getElementById('bookmarkModal').classList.remove('open');
   document.body.style.overflow = '';
 }
