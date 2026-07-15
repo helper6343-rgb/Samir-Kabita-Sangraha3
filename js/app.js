@@ -137,6 +137,7 @@ function hideTopOverlay() {
   const poemModal = document.getElementById('poemModal');
   const bookmarkModal = document.getElementById('bookmarkModal');
   const searchWrap = document.getElementById('searchBarWrap');
+  const sameerAIModal = document.getElementById('sameerAIModal');
 
   if (shareModal.classList.contains('open')) {
     shareModal.classList.remove('open');
@@ -144,6 +145,10 @@ function hideTopOverlay() {
   }
   if (poemModal.classList.contains('open')) {
     _hidePoemModal();
+    return;
+  }
+  if (sameerAIModal && sameerAIModal.classList.contains('open')) {
+    _hideSameerAI();
     return;
   }
   if (bookmarkModal.classList.contains('open')) {
@@ -435,7 +440,7 @@ function showSection(section) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (event && event.currentTarget) event.currentTarget.classList.add('active');
   if (section === 'bookmarks') showBookmarks();
-  if (section === 'home') { closeModal(); closeBookmarkModal(); }
+  if (section === 'home') { closeModal(); closeBookmarkModal(); closeSameerAI(); }
 }
 
 // ===== MENU =====
