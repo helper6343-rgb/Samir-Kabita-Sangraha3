@@ -344,3 +344,5 @@ function setupMenu() {
 function closeDropdown() {
   document.getElementById('dropdownMenu').classList.remove('open');
 }
+
+window.addEventListener('popstate',function(){ if(window.closePoem){closePoem();}});
