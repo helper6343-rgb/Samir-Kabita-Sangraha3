@@ -2,11 +2,12 @@
 // प्रतीक साहित्य संग्रह — Service Worker (PWA)
 // ================================================
 
-const CACHE_NAME = 'samir-sahitya-v2';
+const CACHE_NAME = 'samir-sahitya-v3';
 const CACHE_URLS = [
   './',
   './index.html',
   './about.html',
+  './manifest.json',
   './css/style.css',
   './css/about.css',
   './css/print.css',
