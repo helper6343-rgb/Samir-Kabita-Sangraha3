@@ -400,16 +400,16 @@ const KAVITA_DATA = [
 
 `},
 {
-  id: "k007",
+  id: "k008",
     title: "म्यासेज सिन भयाे",
-    category: "Geet",
+    category: "Kabita",
     tags: ["लाेकगीत",],
     cover: "covers/file_00000000885c8211be243ae2b3f42f6d.jpeg",
     coverEmoji: "👬",
     date: "2025-03-05",
     readTime: "३ मिनेट",
     featured: false,
-    content:`प्र.
+    content:`प्र. 
 एकादशी गै हाैर मन्दिर
 कित अर्कै राखिछाै मन् भित्र
                      म्यासेज सिन् भयाे,सिन भयाे
