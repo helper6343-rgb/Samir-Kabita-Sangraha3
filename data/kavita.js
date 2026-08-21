@@ -404,7 +404,7 @@ const KAVITA_DATA = [
     title: "म्यासेज सिन भयाे",
     category: "Geet",
     tags: ["लाेकगीत",],
-    cover: "",
+    cover: "covers/file_00000000885c8211be243ae2b3f42f6d.jpeg",
     coverEmoji: "👬",
     date: "2025-03-05",
     readTime: "३ मिनेट",
