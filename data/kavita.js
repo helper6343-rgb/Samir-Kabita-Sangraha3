@@ -402,7 +402,7 @@ const KAVITA_DATA = [
   title: "म्यासेज सिन भयाे",
   category: "kabita",
   tags: ["लाेकगीत"],
-  cover: "",
+  cover: "covers/file_00000000885c8211be243ae2b3f42f6d.jpeg",
   coverEmoji: "👬",
   date: "2025-03-05",
   readTime: "३ मिनेट",
@@ -437,8 +437,6 @@ const KAVITA_DATA = [
 उमेरछदा कमाउने जमाउने
 बुढेस् कालमा स्वदेशमै रमाउने
 म्यासेज सिन भयाे....`
-
-
 }
  ];
 
