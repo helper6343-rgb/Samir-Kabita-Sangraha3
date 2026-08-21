@@ -260,7 +260,7 @@ const KAVITA_DATA = [
 {
     id: "k005",
     title: "डुब्न लागेकाे मित्रता",
-    category: "kabita",
+    category: "kavita",
     tags: ["साथी", "घात पछिकाे आस", "सम्मेलन","छन्द भुजङ्गप्रयात"],
     cover: "covers/dubnalagekomitrata7.png",
     coverEmoji: "👬",
@@ -296,7 +296,7 @@ const KAVITA_DATA = [
 },{
   id: "k006",
     title: "प्रश्नाेत्तर २",
-    category: "kabita",
+    category: "kavita",
     tags: ["कविता लेख्ने तरिका", "सूक्ष्म ज्ञान", "छन्द : शार्दूलविक्रीडित"],
     cover: "covers/prasnottar12.png",
     coverEmoji: "👬",
@@ -359,7 +359,7 @@ const KAVITA_DATA = [
 {
   id: "k007",
     title: "सञ्जाल कैदि",
-    category: "kabita",
+    category: "kavita",
     tags: ["माेबाईलकाे लत", "आस्था हराउनु", "छन्द शार्दूलविक्रीडित",],
     cover: "covers/sanjalakaidi54.png",
     coverEmoji: "👬",
@@ -401,7 +401,7 @@ const KAVITA_DATA = [
     {
   id: "k009",
   title: "म्यासेज सिन भयाे",
-  category: "kabita",
+  category: "geet",
   tags: ["लाेकगीत"],
   cover: "covers/file_00000000885c8211be243ae2b3f42f6d.jpeg",
   coverEmoji: "👬",
