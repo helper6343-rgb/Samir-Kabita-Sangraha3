@@ -1,0 +1,36 @@
+/* ===== सबै रचनाहरू: book jasto card =====
+   #allGrid ra .card lai aafno grid/card ko asli id/class le milaunus */
+
+#allGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:26px 18px}
+
+#allGrid .card{
+  position:relative;background:none;border:0;box-shadow:none;
+  padding:0;overflow:visible;display:flex;flex-direction:column;gap:12px;
+}
+
+/* Title, time ra पढ्नुहोस् hatayo */
+#allGrid .card :is(.title,.time,.read-btn,.btn,h3,h4,button,.tag-icon){display:none!important}
+
+/* Book cover */
+#allGrid .card img{
+  width:100%;aspect-ratio:2/3;object-fit:cover;display:block;
+  border-radius:4px 12px 12px 4px;
+  box-shadow:
+    9px 14px 18px -8px rgba(60,40,20,.55),
+    0 3px 0 rgba(0,0,0,.10);
+}
+
+/* Book ko spine (bayan tira) */
+#allGrid .card::after{
+  content:"";position:absolute;top:0;left:0;right:0;aspect-ratio:2/3;
+  border-radius:4px 12px 12px 4px;pointer-events:none;
+  background:linear-gradient(90deg,
+    rgba(0,0,0,.38) 0, rgba(0,0,0,.06) 5%,
+    rgba(255,255,255,.28) 6%, rgba(255,255,255,0) 9%);
+}
+
+/* Talo ma vidha matra (कविता, लेख ...) */
+#allGrid .card .cat{
+  display:block;text-align:center;font-size:15px;
+  letter-spacing:0;text-transform:none;color:var(--accent,#e8710a);font-weight:600;
+}
