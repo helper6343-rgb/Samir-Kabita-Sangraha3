@@ -177,14 +177,32 @@
       <button class="modal-back" onclick="closeModal()">← <span data-en="Back" data-ne="फर्कनुस्">फर्कनुस्</span></button>
       <div class="modal-actions">
         <button class="icon-btn" id="bookmarkBtn" onclick="toggleBookmark()" title="Bookmark">🔖</button>
-        <button class="icon-btn" onclick="sharePoem()" title="Share">📤</button>
         <button class="icon-btn" onclick="window.print()" title="Print">🖨️</button>
+        <button class="icon-btn" id="poemMoreBtn" title="More" aria-haspopup="true" aria-expanded="false" onclick="togglePoemMenu(event)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+        </button>
       </div>
     </div>
     <div class="modal-body" id="modalBody">
       <!-- Content inserted by JS -->
     </div>
   </div>
+</div>
+
+<!-- POEM 3-DOT MENU -->
+<div class="poem-more-menu" id="poemMoreMenu" role="menu">
+  <button role="menuitem" onclick="closePoemMenu(); sharePoem()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+    <span data-en="Share" data-ne="सेयर गर्नुस्">सेयर गर्नुस्</span>
+  </button>
+  <button role="menuitem" onclick="closePoemMenu(); savePoemAsPhoto()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8 9"/></svg>
+    <span data-en="Save to Photo" data-ne="फोटोमा सेभ गर्नुस्">फोटोमा सेभ गर्नुस्</span>
+  </button>
+  <button role="menuitem" onclick="closePoemMenu(); savePoemAsPDF()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 14h6M9 17.5h4"/></svg>
+    <span data-en="Save to PDF" data-ne="PDF मा सेभ गर्नुस्">PDF मा सेभ गर्नुस्</span>
+  </button>
 </div>
 
 <!-- BOOKMARKS MODAL -->
@@ -266,6 +284,231 @@
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+
+<script>
+  /* ===== कविता: ⋮ मेनु, फोटोमा सेभ, PDF मा सेभ ===== */
+  function poemToast(msg, ms) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(poemToast._t);
+    poemToast._t = setTimeout(() => t.classList.remove('show'), ms || 2200);
+  }
+
+  function togglePoemMenu(e) {
+    if (e) e.stopPropagation();
+    const m = document.getElementById('poemMoreMenu');
+    const open = !m.classList.contains('open');
+    m.classList.toggle('open', open);
+    document.getElementById('poemMoreBtn').setAttribute('aria-expanded', open);
+  }
+  function closePoemMenu() {
+    const m = document.getElementById('poemMoreMenu');
+    if (m) m.classList.remove('open');
+    const b = document.getElementById('poemMoreBtn');
+    if (b) b.setAttribute('aria-expanded', 'false');
+  }
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#poemMoreMenu') && !e.target.closest('#poemMoreBtn')) closePoemMenu();
+  });
+
+  /* कविताको शीर्षक, पाठ र cover प्रिन्टमा जस्तै एउटै लामो चित्रमा बनाउने */
+  function _loadImg(src) {
+    return new Promise(res => {
+      const i = new Image();
+      i.crossOrigin = 'anonymous';
+      i.onload = () => res(i);
+      i.onerror = () => res(null);
+      i.src = src;
+    });
+  }
+  function _wrap(ctx, text, maxW) {
+    const out = [];
+    for (const para of text.split('\n')) {
+      const words = para.trim().split(/\s+/).filter(Boolean);
+      if (!words.length) { out.push(''); continue; }
+      let line = '';
+      for (const w of words) {
+        const test = line ? line + ' ' + w : w;
+        if (line && ctx.measureText(test).width > maxW) { out.push(line); line = w; }
+        else line = test;
+      }
+      out.push(line);
+    }
+    return out;
+  }
+  function _roundRectPath(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  async function renderPoemCanvas() {
+    const body = document.getElementById('modalBody');
+    const titleEl = body && body.querySelector('.poem-title-large');
+    const contentEl = body && body.querySelector('.poem-content');
+    if (!titleEl || !contentEl) return null;
+
+    const title = titleEl.textContent.trim();
+    const text = contentEl.textContent.replace(/\r/g, '').replace(/^\s*\n/, '').replace(/\s+$/, '').replace(/^\n+/, '');
+
+    // cover फोटो (img वा background-image)
+    let cover = null;
+    const cv = body.querySelector('.poem-cover-large');
+    if (cv) {
+      let src = '';
+      if (cv.tagName === 'IMG') src = cv.currentSrc || cv.src;
+      else {
+        const inner = cv.querySelector('img');
+        if (inner) src = inner.currentSrc || inner.src;
+        else {
+          const m = /url\(["']?(.*?)["']?\)/.exec(getComputedStyle(cv).backgroundImage || '');
+          if (m) src = m[1];
+        }
+      }
+      if (src) cover = await _loadImg(src);
+    }
+
+    try {
+      await document.fonts.load('700 28px "Tiro Devanagari Hindi"');
+      await document.fonts.load('18px "Tiro Devanagari Hindi"');
+    } catch (e) {}
+
+    const FONT = '"Tiro Devanagari Hindi","Noto Sans Devanagari",serif';
+    const W = 540, PAD = 30, INNER = W - PAD * 2;
+    const TF = '700 28px ' + FONT, PF = '18px ' + FONT;
+    const TLH = 40, PLH = 36;
+
+    const m = document.createElement('canvas').getContext('2d');
+    m.font = TF;  const tLines = _wrap(m, title, INNER);
+    m.font = PF;  const pLines = _wrap(m, text, INNER);
+
+    let coverH = 0;
+    if (cover) coverH = Math.min(INNER * cover.height / cover.width, 320);
+
+    let H = PAD;
+    if (cover) H += coverH + 22;
+    H += tLines.length * TLH + 14;      // शीर्षक
+    H += 1 + 20;                        // विभाजक रेखा
+    pLines.forEach(l => { H += l ? PLH : PLH * 0.7; });
+    H += PAD + 10;
+    H = Math.ceil(H);
+
+    let scale = 2;
+    if (H * scale > 14000) scale = 14000 / H;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(W * scale);
+    canvas.height = Math.round(H * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#faf6f0';
+    ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = 'alphabetic';
+
+    let y = PAD;
+    if (cover) {
+      ctx.save();
+      _roundRectPath(ctx, PAD, y, INNER, coverH, 16);
+      ctx.clip();
+      // object-fit: cover
+      const r = Math.max(INNER / cover.width, coverH / cover.height);
+      const dw = cover.width * r, dh = cover.height * r;
+      ctx.drawImage(cover, PAD + (INNER - dw) / 2, y + (coverH - dh) / 2, dw, dh);
+      ctx.restore();
+      y += coverH + 22;
+    }
+
+    ctx.fillStyle = '#1a1a2e';
+    ctx.font = TF;
+    tLines.forEach(l => { y += TLH - 8; ctx.fillText(l, PAD, y); y += 8; });
+    y += 14;
+
+    ctx.fillStyle = '#d5cfc5';
+    ctx.fillRect(PAD, y, INNER, 1);
+    y += 1 + 20;
+
+    ctx.fillStyle = '#1a1a2e';
+    ctx.font = PF;
+    pLines.forEach(l => {
+      if (l) { ctx.fillText(l, PAD, y + PLH * 0.68); y += PLH; }
+      else y += PLH * 0.7;
+    });
+    return { canvas, title };
+  }
+
+  function _safeName(s) { return (s || 'kavita').replace(/[\\/:*?"<>|\n\r]+/g, ' ').trim().slice(0, 60) || 'kavita'; }
+
+  async function _deliver(blob, name) {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIOS && navigator.canShare) {
+      try {
+        const f = new File([blob], name, { type: blob.type });
+        if (navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); return; }
+      } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+  }
+
+  async function savePoemAsPhoto() {
+    poemToast('फोटो तयार हुँदैछ…', 4000);
+    try {
+      const r = await renderPoemCanvas();
+      if (!r) { poemToast('कविता फेला परेन'); return; }
+      const blob = await new Promise(res => r.canvas.toBlob(res, 'image/png'));
+      if (!blob) throw new Error('blob');
+      await _deliver(blob, _safeName(r.title) + '.png');
+      poemToast('फोटो सेभ भयो ✓');
+    } catch (e) { console.warn(e); poemToast('फोटो बनाउन सकिएन'); }
+  }
+
+  /* एउटै page भएको PDF (फोटोलाई PDF भित्र राखेर) */
+  function _buildPdf(jpeg, imgW, imgH, pageW, pageH) {
+    const enc = new TextEncoder();
+    const parts = []; let len = 0; const offs = [];
+    const push = b => { const u = typeof b === 'string' ? enc.encode(b) : b; parts.push(u); len += u.length; };
+    push('%PDF-1.4\n');
+    offs[1] = len; push('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+    offs[2] = len; push('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
+    offs[3] = len; push('3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + pageW.toFixed(2) + ' ' + pageH.toFixed(2) + '] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n');
+    offs[4] = len; push('4 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + imgW + ' /Height ' + imgH + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpeg.length + ' >>\nstream\n');
+    push(jpeg); push('\nendstream\nendobj\n');
+    const c = 'q ' + pageW.toFixed(2) + ' 0 0 ' + pageH.toFixed(2) + ' 0 0 cm /Im0 Do Q';
+    offs[5] = len; push('5 0 obj\n<< /Length ' + c.length + ' >>\nstream\n' + c + '\nendstream\nendobj\n');
+    const xref = len;
+    let x = 'xref\n0 6\n0000000000 65535 f \n';
+    for (let i = 1; i <= 5; i++) x += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+    push(x);
+    push('trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF');
+    return new Blob(parts, { type: 'application/pdf' });
+  }
+
+  async function savePoemAsPDF() {
+    poemToast('PDF तयार हुँदैछ…', 4000);
+    try {
+      const r = await renderPoemCanvas();
+      if (!r) { poemToast('कविता फेला परेन'); return; }
+      const jblob = await new Promise(res => r.canvas.toBlob(res, 'image/jpeg', 0.92));
+      const jpeg = new Uint8Array(await jblob.arrayBuffer());
+      const pageW = 595.28;
+      const pageH = pageW * r.canvas.height / r.canvas.width;
+      const pdf = _buildPdf(jpeg, r.canvas.width, r.canvas.height, pageW, pageH);
+      await _deliver(pdf, _safeName(r.title) + '.pdf');
+      poemToast('PDF सेभ भयो ✓');
+    } catch (e) { console.warn(e); poemToast('PDF बनाउन सकिएन'); }
+  }
+</script>
 
 <script>
   // Service Worker दर्ता गर्ने
