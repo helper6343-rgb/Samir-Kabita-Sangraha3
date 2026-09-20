@@ -1,31 +1,108 @@
+/* ============================================================
+   PRINT — कविता खोलेर प्रिन्ट थिच्दा खुलेको कविता मात्र छापिने
+   (cover फोटो, शीर्षक, कविता/समय/मिति, र कविताको पाठ)
+   ============================================================ */
 @media print {
-  .header, .bottom-nav, .category-tabs, .tag-filter-wrap,
-  .modal-header, .modal-actions, .share-modal, .toast,
-  .hero-section, .section-header .random-btn,
-  .card-read-btn, .dropdown-menu, .search-bar-wrap { display: none !important; }
 
-  body { background: #fff !important; color: #000 !important; padding: 0; }
+  @page { margin: 1.8cm; }
 
-  .modal-overlay {
+  /* कविता खुलेको बेला (JS ले body मा .printing-poem राख्छ):
+     poemModal बाहेक बाँकी सबै लुकाउने */
+  body.printing-poem > *:not(#poemModal) { display: none !important; }
+
+  body.printing-poem {
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  html { overflow: visible !important; height: auto !important; }
+
+  /* खुला poemModal लाई साधारण page को रूपमा देखाउने */
+  body.printing-poem #poemModal {
+    display: block !important;
     position: static !important;
     transform: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 !important;
     background: #fff !important;
   }
+  body.printing-poem #poemModal .modal-content {
+    height: auto !important;
+    overflow: visible !important;
+    max-width: none !important;
+    box-shadow: none !important;
+  }
+  body.printing-poem #poemModal .modal-body {
+    max-width: none !important;
+    padding: 0 !important;
+    animation: none !important;
+  }
 
-  .poem-content {
+  /* माथिको Back / bookmark / share / print बटन नछाप्ने */
+  #poemModal .modal-header,
+  #poemModal .modal-actions { display: none !important; }
+
+  /* cover फोटो छाप्ने (रङ सहित) */
+  #poemModal .poem-cover-large {
+    display: block !important;
+    width: 100% !important;
+    max-height: 7.5cm !important;
+    object-fit: cover !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    margin-bottom: 14px !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    break-inside: avoid;
+  }
+
+  #poemModal .poem-title-large {
+    text-align: left !important;
+    font-size: 22pt !important;
+    color: #000 !important;
+    margin: 6px 0 10px !important;
+  }
+  #poemModal .poem-meta-row { justify-content: flex-start !important; }
+  #poemModal .poem-meta-badge {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1px solid #999 !important;
+  }
+  #poemModal .poem-meta-badge.accent {
+    background: #e8690a !important;
+    color: #fff !important;
+    border-color: #e8690a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #poemModal .poem-divider { margin: 10px 0 14px !important; }
+  #poemModal .poem-divider::after { background: #fff !important; }
+
+  /* कविताको पाठ */
+  #poemModal .poem-content {
+    text-align: left !important;
     font-size: 14pt !important;
-    line-height: 1.8 !important;
+    line-height: 1.9 !important;
+    color: #000 !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    break-inside: auto;
+  }
+  #poemModal .poem-content::before,
+  #poemModal .poem-content::after { display: none !important; }
+
+  #poemModal .poem-tags { justify-content: flex-start !important; }
+  #poemModal .poem-tag {
+    border: 1px solid #999 !important;
     color: #000 !important;
   }
 
-  .poem-title-large {
-    font-size: 20pt !important;
-    color: #000 !important;
-  }
-
-  .poem-cover-large { display: none !important; }
-
-  @page {
-    margin: 2cm;
-  }
+  .toast, .share-modal { display: none !important; }
 }
