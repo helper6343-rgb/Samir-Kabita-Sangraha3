@@ -184,6 +184,34 @@
   </div>
 </div>
 
+<!-- INSTALL APP BUTTON -->
+<button id="installBtn" style="display:none;position:fixed;right:14px;bottom:80px;z-index:9999;padding:10px 16px;border:none;border-radius:24px;background:#7c4dff;color:#fff;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer;">📲 App Install गर्नुस्</button>
+<div id="iosHint" style="display:none;position:fixed;left:12px;right:12px;bottom:80px;z-index:9999;padding:12px 14px;border-radius:12px;background:#2d1e46;color:#fff;font-size:13px;">iPhone मा: Safari को Share (⬆️) थिचेर <b>"Add to Home Screen"</b> छान्नुस्। <span onclick="this.parentNode.style.display='none'" style="float:right;cursor:pointer;">✕</span></div>
+
+<script>
+  let deferredInstall = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredInstall = e;
+    document.getElementById('installBtn').style.display = 'block';
+  });
+  document.getElementById('installBtn').addEventListener('click', async () => {
+    if (!deferredInstall) return;
+    deferredInstall.prompt();
+    await deferredInstall.userChoice;
+    deferredInstall = null;
+    document.getElementById('installBtn').style.display = 'none';
+  });
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('installBtn').style.display = 'none';
+  });
+  (function () {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+    if (isIOS && !standalone) document.getElementById('iosHint').style.display = 'block';
+  })();
+</script>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -199,7 +227,10 @@
 </script>
 <script src="data/kavita.js"></script> <script src="data/sameerai.js"></script> <script src="js/theme.js"></script> <script src="js/bookmark.js"></script> <script src="js/share.js"></script> <script src="js/app.js"></script> <script src="js/search.js"></script> <script src="js/sameerai.js"></script> <script>
 
-// सबै load भएपछ ि मात्र run गर्ने window.addEventListener('load', () => { setTimeout(startClock, 200);
+// सबै load भएपछि मात्र run गर्ने
+  window.addEventListener('load', () => {
+    if (typeof startClock === 'function') setTimeout(startClock, 200);
+  });
 
 </script>
 </body>

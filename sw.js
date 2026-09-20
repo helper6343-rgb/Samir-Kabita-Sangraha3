@@ -1,8 +1,8 @@
 // ================================================
-// प्रतीक साहित्य संग्रह — Service Worker (PWA)
+// समीर साहित्य संग्रह — Service Worker (PWA)
 // ================================================
 
-const CACHE_NAME = 'samir-sahitya-v1';
+const CACHE_NAME = 'samir-sahitya-v2';
 const CACHE_URLS = [
   './',
   './index.html',
@@ -18,6 +18,8 @@ const CACHE_URLS = [
   './js/about.js',
   './data/kavita.js',
   './data/about.js',
+  './data/sameerai.js',
+  './js/sameerai.js',
   './icons/icon-192x192.png',
   './icons/icon-512x512.png',
   './covers/1776176711764.png',
@@ -32,7 +34,10 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       console.log('[SW] Caching app shell');
-      return cache.addAll(CACHE_URLS);
+      // एउटा file नभए पनि install fail नहोस् भनेर एक-एक गरी cache गर्ने
+      return Promise.allSettled(
+        CACHE_URLS.map(url => cache.add(url).catch(err => console.warn('[SW] skip:', url, err)))
+      );
     }).then(() => self.skipWaiting())
   );
 });
