@@ -1033,3 +1033,43 @@ body { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
   filter: drop-shadow(0 6px 5px rgba(0,0,0,0.35));
 }
 .nav-item.active .nav-icon { transform: none; }
+
+
+/* ===== कविता पेज: ⋮ मेनु ===== */
+.poem-more-menu {
+  position: fixed;
+  top: 58px;
+  right: 10px;
+  z-index: 800;
+  min-width: 210px;
+  padding: 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.28);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.92) translateY(-8px);
+  transform-origin: top right;
+  transition: opacity 0.2s, transform 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+.poem-more-menu.open { opacity: 1; pointer-events: all; transform: scale(1) translateY(0); }
+.poem-more-menu button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.poem-more-menu button:hover, .poem-more-menu button:active { background: var(--bg3); }
+.poem-more-menu button svg { color: var(--accent); flex-shrink: 0; }
+#poemMoreBtn svg { display: block; }
+@media print { .poem-more-menu { display: none !important; } }

@@ -66,7 +66,9 @@
     color: #000 !important;
     margin: 6px 0 10px !important;
   }
-  #poemModal .poem-meta-row { justify-content: flex-start !important; }
+  /* कविता / समय / मिति भएको badge पट्टी नछाप्ने */
+  #poemModal .poem-meta-row { display: none !important; }
+  .poem-more-menu { display: none !important; }
   #poemModal .poem-meta-badge {
     background: #fff !important;
     color: #000 !important;
