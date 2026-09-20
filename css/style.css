@@ -821,3 +821,215 @@ input:checked + .slider::before { transform: translateX(18px); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
+
+
+/* ============================================================
+   POEM READER — नयाँ डिजाइन (कविता पढ्ने पेज)
+   ============================================================ */
+#poemModal .modal-header {
+  background: color-mix(in srgb, var(--modal-bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+#poemModal .modal-back {
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: var(--bg3);
+}
+#poemModal .modal-actions .icon-btn {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--bg3);
+  display: flex; align-items: center; justify-content: center;
+}
+
+#poemModal .modal-body {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 22px 18px 70px;
+  animation: poemFade 0.6s ease both;
+}
+@keyframes poemFade {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#poemModal .poem-cover-large {
+  max-height: 260px;
+  border-radius: 22px;
+  margin-bottom: 26px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+
+#poemModal .poem-title-large {
+  text-align: center;
+  font-size: 30px;
+  line-height: 1.35;
+  margin: 4px 0 12px;
+  color: var(--accent);
+  letter-spacing: 0.3px;
+}
+
+#poemModal .poem-meta-row {
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+#poemModal .poem-meta-badge {
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+}
+#poemModal .poem-meta-badge.accent {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+/* सजावटी विभाजक रेखा  ─── ❦ ─── */
+#poemModal .poem-divider {
+  height: 22px;
+  margin: 18px 0 22px;
+  background: none;
+  position: relative;
+  text-align: center;
+}
+#poemModal .poem-divider::before {
+  content: '';
+  position: absolute;
+  left: 8%; right: 8%; top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.6;
+}
+#poemModal .poem-divider::after {
+  content: '❦';
+  position: relative;
+  padding: 0 14px;
+  color: var(--accent);
+  font-size: 18px;
+  line-height: 22px;
+  background: var(--modal-bg);
+}
+
+/* कविताको मुख्य पाठ */
+#poemModal .poem-content {
+  text-align: center;
+  font-size: 19px;
+  line-height: 2.15;
+  letter-spacing: 0.2px;
+  padding: 26px 18px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--card-shadow);
+  position: relative;
+}
+#poemModal .poem-content::before,
+#poemModal .poem-content::after {
+  position: absolute;
+  font-family: Georgia, serif;
+  font-size: 54px;
+  line-height: 1;
+  color: var(--accent);
+  opacity: 0.25;
+  pointer-events: none;
+}
+#poemModal .poem-content::before { content: '“'; top: 6px; left: 12px; }
+#poemModal .poem-content::after  { content: '”'; bottom: -14px; right: 12px; }
+
+#poemModal .poem-tags {
+  justify-content: center;
+  margin-top: 26px;
+}
+#poemModal .poem-tag {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  font-size: 12px;
+}
+
+/* प्रिन्ट गर्दा सादा देखियोस् */
+@media print {
+  #poemModal .poem-content { border: none; box-shadow: none; background: none; }
+  #poemModal .poem-content::before, #poemModal .poem-content::after { display: none; }
+}
+
+
+/* ============================================================
+   BOTTOM NAV — नयाँ डिजाइन (तैरिने गोलो पट्टी)
+   ============================================================ */
+.bottom-nav {
+  left: 12px;
+  right: 12px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  padding: 6px;
+  gap: 4px;
+  border: 1px solid var(--nav-border);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--nav-bg) 90%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+}
+.nav-item {
+  padding: 8px 2px 6px;
+  border-radius: 22px;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+.nav-icon { transition: transform 0.25s ease; }
+.nav-label { font-weight: 500; letter-spacing: 0.2px; }
+.nav-item.active {
+  color: var(--accent);
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+.nav-item.active .nav-icon { transform: translateY(-2px) scale(1.15); }
+.nav-item.active .nav-label { font-weight: 700; }
+
+/* पट्टीले सामग्री नढाकोस् */
+body { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+#installBtn { bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important; }
+#iosHint    { bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important; }
+
+@media print { .bottom-nav { display: none !important; } }
+
+
+/* ===== HEADER LOGO (नयाँ फोटो लोगो) ===== */
+.logo-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+  -webkit-user-drag: none;
+}
+
+
+/* ===== NAV SVG ICONS (emoji को सट्टा चित्र) ===== */
+.nav-icon { display: flex; align-items: center; justify-content: center; height: 24px; }
+.nav-svg { display: block; }
+.nav-item.active .nav-svg .ni-fill {
+  fill: color-mix(in srgb, currentColor 24%, transparent);
+}
+
+
+/* ===== NAV 3D ICONS ===== */
+.nav-icon { height: 34px; }
+.nav-svg.nav3d {
+  width: 32px; height: 32px;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.25));
+  opacity: 0.92;
+  transition: transform 0.25s ease, filter 0.25s ease, opacity 0.25s ease;
+}
+.nav-item.active .nav-svg.nav3d {
+  opacity: 1;
+  transform: translateY(-3px) scale(1.18);
+  filter: drop-shadow(0 6px 5px rgba(0,0,0,0.35));
+}
+.nav-item.active .nav-icon { transform: none; }
