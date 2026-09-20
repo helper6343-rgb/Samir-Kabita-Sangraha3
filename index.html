@@ -7,8 +7,9 @@
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2d1e46" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content= " समीर साहित्य" />
+  <meta name="apple-mobile-web-app-title" content="समीर साहित्य" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/print.css" media="print" />
@@ -205,6 +206,13 @@
   window.addEventListener('appinstalled', () => {
     document.getElementById('installBtn').style.display = 'none';
   });
+
+  // प्रिन्ट: कविता खुलेको छ भने त्यही कविता मात्र छाप्ने
+  window.addEventListener('beforeprint', () => {
+    const m = document.getElementById('poemModal');
+    document.body.classList.toggle('printing-poem', !!(m && m.classList.contains('open')));
+  });
+  window.addEventListener('afterprint', () => document.body.classList.remove('printing-poem'));
   (function () {
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
