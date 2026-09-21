@@ -2,7 +2,7 @@
 // समीर साहित्य संग्रह — Service Worker (PWA)
 // ================================================
 
-const CACHE_NAME = 'samir-sahitya-v12';
+const CACHE_NAME = 'samir-sahitya-v13';
 const CACHE_URLS = [
   './',
   './index.html',
@@ -10,12 +10,14 @@ const CACHE_URLS = [
   './css/style.css',
   './css/about.css',
   './css/print.css',
+  './css/home-update.css',
   './js/app.js',
   './js/theme.js',
   './js/bookmark.js',
   './js/search.js',
   './js/share.js',
   './js/about.js',
+  './js/home-update.js',
   './data/kavita.js',
   './data/about.js',
   './data/sameerai.js',
@@ -61,46 +63,53 @@ self.addEventListener('activate', event => {
   );
 });
 
-// ── Fetch: Cache First, Network Fallback ──────────
+// ── Fetch ─────────────────────────────────────────
+// HTML / JS / CSS / data: Network First (नयाँ परिवर्तन तुरुन्तै देखिन्छ, offline भए cache)
+// फोटो, icon आदि: Cache First
 self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+
   // बाहिरी requests (Google Fonts आदि) network बाट लिने
-  if (!event.request.url.startsWith(self.location.origin)) {
+  if (!req.url.startsWith(self.location.origin)) {
+    event.respondWith(fetch(req).catch(() => new Response('')));
+    return;
+  }
+
+  const url = new URL(req.url);
+  const isCode =
+    req.destination === 'document' ||
+    req.destination === 'script' ||
+    req.destination === 'style' ||
+    /\.(html|js|css|json)$/.test(url.pathname) ||
+    url.pathname.endsWith('/');
+
+  if (isCode) {
     event.respondWith(
-      fetch(event.request).catch(() => new Response(''))
+      fetch(req).then(response => {
+        if (response && response.status === 200) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
+        }
+        return response;
+      }).catch(() =>
+        caches.match(req).then(cached => cached || (req.destination === 'document' ? caches.match('./index.html') : undefined))
+      )
     );
     return;
   }
 
+  // Cache First (फोटो, icon)
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) {
-        // Cache मा छ भने त्यही दिने, background मा update गर्ने
-        const networkUpdate = fetch(event.request).then(response => {
-          if (response && response.status === 200) {
-            caches.open(CACHE_NAME).then(cache =>
-              cache.put(event.request, response.clone())
-            );
-          }
-          return response;
-        }).catch(() => {});
-        return cached;
-      }
-
-      // Cache मा छैन भने network बाट लिने
-      return fetch(event.request).then(response => {
-        if (!response || response.status !== 200 || response.type === 'opaque') {
-          return response;
-        }
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then(cache =>
-          cache.put(event.request, responseToCache)
-        );
+    caches.match(req).then(cached => {
+      if (cached) return cached;
+      return fetch(req).then(response => {
+        if (!response || response.status !== 200 || response.type === 'opaque') return response;
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
         return response;
       }).catch(() => {
-        // Offline fallback
-        if (event.request.destination === 'document') {
-          return caches.match('./index.html');
-        }
+        if (req.destination === 'document') return caches.match('./index.html');
       });
     })
   );
