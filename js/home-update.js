@@ -88,6 +88,9 @@
     if (!card.dataset.orig) card.dataset.orig = coverSrc(card);
 
     var title = card.dataset.title, label = card.dataset.label;
+    var ov = window.SPG_OV && window.SPG_OV.get(title);
+    if (ov && ov.genre) label = ov.genre;
+    var shownTitle = (ov && ov.title) || title;
     var custom = MAP[title];
     var orig = card.dataset.orig;
     if (!custom && !orig) return;
@@ -99,13 +102,13 @@
 
     if (custom) {
       var f = document.createElement('img');
-      f.className = 'bk-full'; f.src = custom; f.alt = title;
+      f.className = 'bk-full'; f.src = custom; f.alt = shownTitle;
       box.appendChild(f);
     } else {
       var bg = document.createElement('img');
       bg.className = 'bk-bg'; bg.src = orig; bg.alt = ''; bg.setAttribute('aria-hidden', 'true');
       var im = document.createElement('img');
-      im.className = 'bk-img'; im.src = orig; im.alt = title;
+      im.className = 'bk-img'; im.src = orig; im.alt = shownTitle;
       box.appendChild(bg); box.appendChild(im);
     }
 
@@ -122,9 +125,9 @@
     var lb = document.createElement('div');
     lb.className = 'bk-label'; lb.textContent = label;
     wrap.appendChild(box); wrap.appendChild(lb);
-    if (title) {
+    if (shownTitle) {
       var tt = document.createElement('div');
-      tt.className = 'bk-title'; tt.textContent = title; tt.title = title;
+      tt.className = 'bk-title'; tt.textContent = shownTitle; tt.title = shownTitle;
       wrap.appendChild(tt);
     }
 
@@ -233,49 +236,52 @@
     });
   }
 
+  /* Photo (File) lai 900x1200 banaera GitHub ma halne; MAP update garne */
+  async function saveCover(title, file) {
+    var a = admin();
+    if (!a || !a.isLoggedIn()) throw new Error('पहिले लगइन गर्नुस्');
+    toast('फोटो तयार हुँदैछ…', 8000);
+    var b64 = await processImage(file);
+    var path = 'covers/book/' + hash(title) + '.jpg';
+
+    toast('अपलोड हुँदैछ…', 15000);
+    var ex = await getFile(path);
+    var r1 = await putFile(path, b64, 'Book cover: ' + title, ex && ex.sha);
+    if (!r1.ok) throw new Error(r1.status === 401 || r1.status === 403 ? 'अनुमति छैन। फेरि लगइन गर्नुस्।' : 'फोटो अपलोड भएन (' + r1.status + ')');
+
+    var value = path + '?v=' + Date.now();
+    var ok = false;
+    for (var i = 0; i < 3 && !ok; i++) {
+      var jf = await getFile(MAP_URL);
+      var cur = {};
+      if (jf) { try { cur = JSON.parse(dec(jf.content)); } catch (e) { cur = {}; } }
+      cur[title] = value;
+      var r2 = await putFile(MAP_URL, enc(JSON.stringify(cur, null, 2)), 'Update book covers', jf && jf.sha);
+      if (r2.ok) ok = true;
+      else if (r2.status !== 409 && r2.status !== 422) throw new Error('सूची अपडेट भएन (' + r2.status + ')');
+    }
+    if (!ok) throw new Error('सूची अपडेट भएन');
+    MAP[title] = value;
+    rebuildAll();
+    toast('Book cover बदलियो ✓ (१-२ मिनेटमा सबैले देख्छन्)', 3500);
+  }
+
   function changeCover(card) {
     var a = admin();
     if (!a || !a.isLoggedIn()) { toast('पहिले लगइन गर्नुस्'); return; }
     var title = card.dataset.title;
     if (!title) { toast('रचनाको शीर्षक भेटिएन'); return; }
-
     var inp = document.createElement('input');
     inp.type = 'file'; inp.accept = 'image/*';
     inp.onchange = async function () {
       var file = inp.files && inp.files[0];
       if (!file) return;
-      try {
-        toast('फोटो तयार हुँदैछ…', 8000);
-        var b64 = await processImage(file);
-        var path = 'covers/book/' + hash(title) + '.jpg';
-
-        toast('अपलोड हुँदैछ…', 15000);
-        var ex = await getFile(path);
-        var r1 = await putFile(path, b64, 'Book cover: ' + title, ex && ex.sha);
-        if (!r1.ok) throw new Error(r1.status === 401 || r1.status === 403 ? 'अनुमति छैन। फेरि लगइन गर्नुस्।' : 'फोटो अपलोड भएन (' + r1.status + ')');
-
-        var value = path + '?v=' + Date.now();
-        var ok = false;
-        for (var i = 0; i < 3 && !ok; i++) {
-          var jf = await getFile(MAP_URL);
-          var cur = {};
-          if (jf) { try { cur = JSON.parse(dec(jf.content)); } catch (e) { cur = {}; } }
-          cur[title] = value;
-          var r2 = await putFile(MAP_URL, enc(JSON.stringify(cur, null, 2)), 'Update book covers', jf && jf.sha);
-          if (r2.ok) ok = true;
-          else if (r2.status !== 409 && r2.status !== 422) throw new Error('सूची अपडेट भएन (' + r2.status + ')');
-        }
-        if (!ok) throw new Error('सूची अपडेट भएन');
-
-        MAP[title] = value;
-        rebuild(card);
-        toast('Book cover बदलियो ✓ (१-२ मिनेटमा सबैले देख्छन्)', 3500);
-      } catch (e) {
-        toast((e && e.message) || 'फोटो बदल्न सकिएन', 4000);
-      }
+      try { await saveCover(title, file); }
+      catch (e) { toast((e && e.message) || 'फोटो बदल्न सकिएन', 4000); }
     };
     inp.click();
   }
+  window.SPG_BOOK = { saveCover: saveCover, refresh: function () { rebuildAll(); } };
 
 
   /* ---------- Kabita ko ek line lai ek nai line ma rakhne ----------
@@ -285,7 +291,8 @@
   function fitPoem() {
     var pc = document.querySelector('#modalBody .poem-content');
     if (!pc || !pc.clientWidth) return;
-    pc.style.fontSize = '';                       // asli size
+    var us = pc.dataset.userSize;                 // admin le rakheko size (bhaye)
+    pc.style.fontSize = us ? us + 'px' : '';      // natra asli size
     var cs = getComputedStyle(pc);
     var base = parseFloat(cs.fontSize);
     var avail = pc.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
@@ -301,6 +308,7 @@
       pc.style.fontSize = size + 'px';
     }
   }
+  window.SPG_fitPoem = fitPoem;
   var _fitT;
   function schedulePoemFit() {
     cancelAnimationFrame(_fitT);
@@ -338,6 +346,7 @@
   }
 
   document.addEventListener('spg-admin-change', syncAdmin);
+  document.addEventListener('spg-ov-change', function () { rebuildAll(); });
   window.addEventListener('load', syncAdmin);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
