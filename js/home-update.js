@@ -103,13 +103,38 @@
     if (custom) {
       var f = document.createElement('img');
       f.className = 'bk-full'; f.src = custom; f.alt = shownTitle;
+      f.onerror = function () {
+        // Custom cover kholna sakena (missing/galat naam) bhane, asli photo ma pharkane
+        f.remove();
+        if (!box.querySelector('.bk-bg') && orig) {
+          var bg2 = document.createElement('img');
+          bg2.className = 'bk-bg'; bg2.src = orig; bg2.alt = ''; bg2.setAttribute('aria-hidden', 'true');
+          var im2 = document.createElement('img');
+          im2.className = 'bk-img'; im2.src = orig; im2.alt = shownTitle;
+          box.insertBefore(bg2, box.firstChild);
+          box.insertBefore(im2, box.querySelector('.bk-cam'));
+        } else if (!orig) {
+          box.classList.add('bk-noimg');
+          var ph = document.createElement('div');
+          ph.className = 'bk-fallback';
+          ph.textContent = '📖';
+          box.insertBefore(ph, box.querySelector('.bk-cam'));
+        }
+      };
       box.appendChild(f);
-    } else {
+    } else if (orig) {
       var bg = document.createElement('img');
       bg.className = 'bk-bg'; bg.src = orig; bg.alt = ''; bg.setAttribute('aria-hidden', 'true');
       var im = document.createElement('img');
       im.className = 'bk-img'; im.src = orig; im.alt = shownTitle;
       box.appendChild(bg); box.appendChild(im);
+    } else {
+      // photo nai nabhaeko rachana ko lagi khali thau
+      box.classList.add('bk-noimg');
+      var ph2 = document.createElement('div');
+      ph2.className = 'bk-fallback';
+      ph2.textContent = '📖';
+      box.appendChild(ph2);
     }
 
     var cam = document.createElement('button');
@@ -288,13 +313,15 @@
      Line lamo bhayo bhane akshar aafai sano hunchha, dui line ma bhaachindaina. */
   var _measure = document.createElement('canvas').getContext('2d');
   var POEM_MIN = 11;
+  var POEM_BASE = 20;                              // sabai kabita/लेख ko akshar ustai naap (admin le size nabadaleko bhaye)
   function fitPoem() {
     var pc = document.querySelector('#modalBody .poem-content');
     if (!pc || !pc.clientWidth) return;
-    var us = pc.dataset.userSize;                 // admin le rakheko size (bhaye)
-    pc.style.fontSize = us ? us + 'px' : '';      // natra asli size
+    var us = pc.dataset.userSize;                 // admin le ek-ek rachana ko lagi rakheko size (bhaye)
+    var base = us ? parseFloat(us) : POEM_BASE;
+    pc.style.fontSize = base + 'px';
+    pc.style.fontStyle = 'normal';
     var cs = getComputedStyle(pc);
-    var base = parseFloat(cs.fontSize);
     var avail = pc.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     if (!base || avail <= 0) return;
     _measure.font = (cs.fontStyle || 'normal') + ' ' + (cs.fontWeight || 400) + ' ' + base + 'px ' + cs.fontFamily;
