@@ -86,3 +86,10 @@ body.spg-admin .bk-cam{display:flex}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 [data-theme="dark"] .bk-title{color:#c9c4d6}
+
+/* Photo nabhaeko wa custom cover khulna nasakeko book ko lagi */
+.bk-cover-box.bk-noimg{
+  background:linear-gradient(150deg,#2a2440,#4a3a1a);
+  display:flex;align-items:center;justify-content:center;
+}
+.bk-fallback{font-size:64px;opacity:.55;filter:grayscale(.2)}
