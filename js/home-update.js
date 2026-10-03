@@ -140,7 +140,7 @@
     var cam = document.createElement('button');
     cam.className = 'bk-cam'; cam.type = 'button';
     cam.setAttribute('aria-label', 'Book cover फोटो बदल्नुस्');
-    cam.textContent = '📷';
+    cam.textContent = '✏️';
     cam.addEventListener('click', function (e) {
       e.stopPropagation(); e.preventDefault();
       changeCover(card);

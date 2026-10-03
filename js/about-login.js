@@ -23,6 +23,7 @@
     website: 'https://sameerpangeni.com.np'
   };
   var TOKEN_KEY = 'spg_admin_token';
+  var PHONE_KEY = 'spg_admin_phone';
   var ADMIN_FILE = 'data/admin.json';
   var PBKDF2_ITER = 250000;
 
@@ -108,6 +109,8 @@
   /* ---------- GitHub ---------- */
   function token() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
   function setToken(t) { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (e) {} }
+  function phoneNum() { try { return localStorage.getItem(PHONE_KEY) || ''; } catch (e) { return ''; } }
+  function setPhone(p) { try { p ? localStorage.setItem(PHONE_KEY, p) : localStorage.removeItem(PHONE_KEY); } catch (e) {} }
   function ghHeaders(t) { return { Authorization: 'Bearer ' + t, Accept: 'application/vnd.github+json' }; }
   function ghUrl(path) { return 'https://api.github.com/repos/' + REPO + '/contents/' + path; }
   async function ghGet(path, t) {
@@ -180,8 +183,9 @@
   $('#spToLogin').addEventListener('click', function () { mode(false); });
   function validPhone(p) { return /^\d{10}$/.test(p); }
 
-  function finish(t) {
+  function finish(t, phone) {
     setToken(t);
+    if (phone) setPhone(phone);
     ['#spPass', '#spPass2', '#spPass3', '#spToken'].forEach(function (s) { $(s).value = ''; });
     say(''); close(loginOv); refreshMenu();
     toast('लगइन भयो ✓');
@@ -205,7 +209,7 @@
       catch (e) { return say('मोबाइल नम्बर वा पासवर्ड मिलेन।', 'err'); }
       try { await verify(tok); }
       catch (e) { return say('सुरक्षा कुञ्जी (token) सकिएछ। "पासवर्ड बिर्सनुभयो?" बाट नयाँ token राखेर फेरि सेट गर्नुस्।', 'err'); }
-      finish(tok);
+      finish(tok, phone);
     } finally { btn.disabled = false; }
   });
 
@@ -223,17 +227,57 @@
       var ex = await ghGet(ADMIN_FILE, tok);
       var r = await ghPut(ADMIN_FILE, enc(JSON.stringify(blob, null, 2)), 'Set admin login', ex && ex.sha, tok);
       if (!r.ok) throw new Error('सेभ भएन (' + r.status + ')');
-      finish(tok);
+      finish(tok, phone);
     } catch (e) {
       say((e && e.message) || 'सेटअप भएन।', 'err');
     } finally { btn.disabled = false; }
   });
 
+
+  /* ---------- सेटिङ: पासवर्ड बदल्ने ---------- */
+  var settingsOv = overlay('spSettings',
+    '<h2>⚙️ सेटिङ</h2>' +
+    '<div class="sp-sub">पासवर्ड बदल्नुस्</div>' +
+    '<input class="sp-input" id="spNewPass1" type="password" placeholder="नयाँ पासवर्ड (कम्तीमा ८ अक्षर)" autocomplete="new-password">' +
+    '<input class="sp-input" id="spNewPass2" type="password" placeholder="नयाँ पासवर्ड फेरि लेख्नुस्" autocomplete="new-password">' +
+    '<button class="sp-btn" id="spChangePassBtn">पासवर्ड बदल्नुस्</button>' +
+    '<div class="sp-msg" id="spSetMsg"></div>');
+  var $$ = function (s) { return settingsOv.querySelector(s); };
+  $$('#spChangePassBtn').addEventListener('click', async function () {
+    var m = $$('#spSetMsg'), p1 = $$('#spNewPass1').value, p2 = $$('#spNewPass2').value;
+    m.className = 'sp-msg'; m.textContent = '';
+    if (p1.length < 8) { m.className = 'sp-msg err'; m.textContent = 'पासवर्ड कम्तीमा ८ अक्षरको हुनुपर्छ।'; return; }
+    if (p1 !== p2) { m.className = 'sp-msg err'; m.textContent = 'दुवै पासवर्ड मिलेन।'; return; }
+    var btn = this; btn.disabled = true; m.textContent = 'बदल्दैछ…';
+    try {
+      await changePassword(p1);
+      $$('#spNewPass1').value = ''; $$('#spNewPass2').value = '';
+      m.textContent = ''; close(settingsOv);
+      toast('पासवर्ड बदलियो ✓');
+    } catch (e) { m.className = 'sp-msg err'; m.textContent = (e && e.message) || 'बदलिएन।'; }
+    finally { btn.disabled = false; }
+  });
+  async function changePassword(newPass) {
+    var t = token(), phone = phoneNum();
+    if (!t || !phone) throw new Error('फेरि लगइन गर्नुस्।');
+    var blob = await sealToken(t, phone, newPass);
+    var ex = await getFile(ADMIN_FILE, t);
+    var r = await putFile(ADMIN_FILE, enc(JSON.stringify(blob, null, 2)), 'Change password', ex && ex.sha, t);
+    if (!r.ok) throw new Error('सेभ भएन (' + r.status + ')');
+  }
+  async function getFile(path, t) {
+    var r = await fetch(ghUrl(path) + '?ref=' + BRANCH, { headers: ghHeaders(t), cache: 'no-store' });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('GitHub ' + r.status);
+    return r.json();
+  }
+
   /* ---------- 3-dot menu मा item थप्ने ---------- */
-  var aboutLink, loginLink;
+  var aboutLink, loginLink, settingsLink;
   function refreshMenu() {
     if (!loginLink) return;
     loginLink.innerHTML = token() ? '🔓 <span>लगआउट</span>' : '🔐 <span>लगइन</span>';
+    if (settingsLink) settingsLink.style.display = token() ? '' : 'none';
   }
   function buildMenu() {
     var menu = document.getElementById('dropdownMenu');
@@ -250,12 +294,17 @@
     loginLink.addEventListener('click', function (e) {
       e.preventDefault();
       if (token()) {
-        if (confirm('लगआउट गर्ने हो?')) { setToken(''); refreshMenu(); closeMenu(); toast('लगआउट भयो'); document.dispatchEvent(new CustomEvent('spg-admin-change')); }
+        if (confirm('लगआउट गर्ने हो?')) { setToken(''); setPhone(''); refreshMenu(); closeMenu(); toast('लगआउट भयो'); document.dispatchEvent(new CustomEvent('spg-admin-change')); }
       } else { mode(false); open(loginOv); }
     });
 
-    if (divider) { menu.insertBefore(aboutLink, divider); menu.insertBefore(loginLink, divider); }
-    else { menu.appendChild(aboutLink); menu.appendChild(loginLink); }
+    settingsLink = document.createElement('a');
+    settingsLink.href = '#'; settingsLink.id = 'spMenuSettings';
+    settingsLink.innerHTML = '⚙️ <span>सेटिङ</span>';
+    settingsLink.addEventListener('click', function (e) { e.preventDefault(); open(settingsOv); });
+
+    if (divider) { menu.insertBefore(aboutLink, divider); menu.insertBefore(settingsLink, divider); menu.insertBefore(loginLink, divider); }
+    else { menu.appendChild(aboutLink); menu.appendChild(settingsLink); menu.appendChild(loginLink); }
     refreshMenu();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildMenu);

@@ -110,7 +110,17 @@ textarea.ae-in{min-height:220px;line-height:1.9;resize:vertical}\
       var wg = (ov && ov.genre) || g.dataset.origGenre;
       if (g.textContent !== wg) g.textContent = wg;
     }
+    applyDesign((ov && ov.design) || '');
     if (window.SPG_fitPoem) window.SPG_fitPoem();
+  }
+
+  function applyDesign(name) {
+    var m = document.getElementById('poemModal');
+    if (!m) return;
+    Array.prototype.slice.call(m.classList).forEach(function (c) {
+      if (c.indexOf('ae-design-') === 0) m.classList.remove(c);
+    });
+    if (name) m.classList.add('ae-design-' + name);
   }
 
   var _t;
@@ -135,6 +145,7 @@ textarea.ae-in{min-height:220px;line-height:1.9;resize:vertical}\
     '<h2>✏️ सम्पादन</h2>' +
     '<label for="aeTitle">शीर्षक</label><input class="ae-in" id="aeTitle" type="text">' +
     '<label for="aeGenre">विधा</label><select class="ae-in" id="aeGenre"></select>' +
+    '<label for="aeDesign">डिजाइन</label><select class="ae-in" id="aeDesign"></select>' +
     '<label for="aeText">पाठ (अशुद्धि यहीँ मिलाउनुस्)</label><textarea class="ae-in" id="aeText"></textarea>' +
     '<label>अक्षरको साइज</label><div class="ae-row"><input type="range" id="aeSize" min="12" max="32" step="1"><span class="ae-val" id="aeSizeVal"></span></div>' +
     '<div class="ae-note">धेरै ठूलो राख्दा लामो लाइन अटाउन अक्षर आफैँ सानो हुन्छ।</div>' +
@@ -147,6 +158,10 @@ textarea.ae-in{min-height:220px;line-height:1.9;resize:vertical}\
   document.body.appendChild(ed);
   var $ = function (s) { return ed.querySelector(s); };
   var sizeTouched = false, editKey = '', baseText = '', baseSize = 20;
+
+  var DESIGNS = [("", "क्लासिक (पाना जस्तो)"), ("card", "कार्ड"), ("magazine", "म्यागजिन"), ("dark", "डार्क (रातको लागि)"), ("minimal", "मिनिमल (फोटो बिना)"), ("vintage", "पुरानो पाना")];
+  var dsel = $('#aeDesign');
+  dsel.innerHTML = DESIGNS.map(function (d) { return '<option value="' + d[0] + '">' + d[1] + '</option>'; }).join('');
 
   var sel = $('#aeGenre');
   sel.innerHTML = '<option value="">(जस्ताको तस्तै)</option>' + GENRES.map(function (g) { return '<option>' + g + '</option>'; }).join('');
@@ -166,6 +181,7 @@ textarea.ae-in{min-height:220px;line-height:1.9;resize:vertical}\
     var cur = (ov.genre) || (g && (g.dataset.origGenre || g.textContent).trim()) || '';
     if (cur && GENRES.indexOf(cur) < 0) { sel.insertAdjacentHTML('beforeend', '<option>' + cur + '</option>'); }
     sel.value = cur;
+    dsel.value = ov.design || '';
     baseText = norm(e.c.dataset.origText !== undefined ? e.c.dataset.origText : e.c.textContent);
     $('#aeText').value = norm(e.c.textContent);
     var fs = ov.size || Math.round(parseFloat(getComputedStyle(e.c).fontSize)) || 20;
@@ -226,6 +242,8 @@ textarea.ae-in{min-height:220px;line-height:1.9;resize:vertical}\
 
       if (title && title !== editKey) entry.title = title; else delete entry.title;
       if (genre) entry.genre = genre; else delete entry.genre;
+      var design = dsel.value;
+      if (design) entry.design = design; else delete entry.design;
       if (text && text !== baseText) entry.text = text; else delete entry.text;
       if (sizeTouched) entry.size = parseInt($('#aeSize').value, 10); else delete entry.size;
 
