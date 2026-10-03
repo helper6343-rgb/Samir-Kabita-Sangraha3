@@ -75,7 +75,7 @@
   background:rgba(0,0,0,.62);color:#fff;font-size:19px;line-height:1;
   display:none;align-items:center;justify-content:center;cursor:pointer;
 }
-body.spg-admin .bk-cam{display:flex}
+body.spg-admin.spg-edit-mode .bk-cam{display:flex}
 
 /* Vidha ko talo ma sano akshar ma शीर्षक (ek line) */
 .bk-label{margin-top:10px;}
@@ -93,3 +93,106 @@ body.spg-admin .bk-cam{display:flex}
   display:flex;align-items:center;justify-content:center;
 }
 .bk-fallback{font-size:64px;opacity:.55;filter:grayscale(.2)}
+
+/* ===== Kavita/lekh padhne page: PDF/Photo download jastai "kitab ko panna" look ===== */
+#poemModal .modal-content{background:#faf6f0}
+[data-theme="dark"] #poemModal .modal-content{background:#221d30}
+
+#modalBody{
+  max-width:640px;margin:0 auto;padding:22px 26px 40px;
+  font-family:"Tiro Devanagari Hindi","Noto Sans Devanagari",serif;
+}
+
+/* Cover photo: PDF/photo ma jasto gol kunа sahit, mathi matra */
+.poem-cover-large{
+  border-radius:16px;overflow:hidden;
+  box-shadow:0 10px 22px -10px rgba(60,40,20,.4);
+  margin-bottom:26px;
+}
+.poem-cover-large img{display:block;width:100%;height:auto}
+
+/* शीर्षक: PDF/photo jasto bold, ekdam simple */
+.poem-title-large{
+  font-family:"Tiro Devanagari Hindi","Noto Sans Devanagari",serif;
+  font-weight:700;font-size:30px;line-height:1.35;
+  color:#1a1a2e;text-align:left;margin:0 0 18px;
+}
+[data-theme="dark"] .poem-title-large{color:#f2ecff}
+
+/* Meta chip (विधा, मिनेट, मिति) लाई सानो, हल्का, शीर्षक मुनि */
+.poem-title-large + *{margin-bottom:10px}
+
+/* Curly quote / quote-bubble card हटाएर सिधा पानाको रूपमा */
+#modalBody .quote-mark,
+#modalBody [class*="quote-icon"],
+#modalBody [class*="quote-mark"]{display:none!important}
+#modalBody .poem-content,
+#modalBody [class*="quote"]{
+  background:transparent!important;box-shadow:none!important;
+  border-radius:0!important;padding:0!important;margin:0!important;
+}
+
+/* पतलो सुनौलो विभाजक रेखा, शीर्षक र पाठको बीचमा */
+.poem-title-large{
+  border-bottom:1px solid rgba(232,196,122,.55);
+  padding-bottom:18px;
+}
+
+/* पाठ: सफा, पढ्न सजिलो */
+.poem-content{
+  font-family:"Tiro Devanagari Hindi","Noto Sans Devanagari",serif;
+  color:#2a2438;line-height:2.1;text-align:left;
+  white-space:pre-line;margin-top:22px;
+}
+[data-theme="dark"] .poem-content{color:#e7e1f2}
+
+/* ===== लेख/कविता पढ्ने पेजका ६ डिजाइन (admin ✏️ बाट छान्न मिल्ने) ===== */
+
+/* कार्ड: सेतो कार्डमा शीर्षक र पाठ, फोटो माथि अलग */
+#poemModal.ae-design-card #modalBody{padding:18px 18px 40px}
+#poemModal.ae-design-card .poem-title-large{
+  background:#fff;border-radius:18px 18px 0 0;padding:24px 24px 14px;margin:0;
+  border-bottom:0;box-shadow:0 10px 24px -16px rgba(0,0,0,.3);
+}
+#poemModal.ae-design-card .poem-content{
+  background:#fff;border-radius:0 0 18px 18px;padding:4px 24px 28px;margin-top:0;
+  box-shadow:0 10px 24px -16px rgba(0,0,0,.3);
+}
+[data-theme="dark"] #poemModal.ae-design-card .poem-title-large,
+[data-theme="dark"] #poemModal.ae-design-card .poem-content{background:#2a2438;color:#eee}
+
+/* म्यागजिन: ठूलो bold शीर्षक, मोटो तल्लो रेखा */
+#poemModal.ae-design-magazine .poem-title-large{
+  font-family:"Playfair Display",serif;font-size:32px;letter-spacing:.3px;
+  border-bottom:4px solid #1a1a2e;padding-bottom:12px;
+}
+[data-theme="dark"] #poemModal.ae-design-magazine .poem-title-large{border-color:#e8c47a}
+#poemModal.ae-design-magazine .poem-content{font-size:19px;line-height:2}
+#poemModal.ae-design-magazine .poem-cover-large{border-radius:4px}
+
+/* डार्क: जहिले पनि गाढा पृष्ठभूमि, सुनौलो अक्षर — रातमा पढ्न सजिलो */
+#poemModal.ae-design-dark .modal-content{background:#171224!important}
+#poemModal.ae-design-dark .poem-title-large{color:#f3d98b;border-color:rgba(243,217,139,.4)}
+#poemModal.ae-design-dark .poem-content{color:#ddd3f0}
+#poemModal.ae-design-dark .modal-back,
+#poemModal.ae-design-dark .icon-btn{color:#f3d98b}
+
+/* मिनिमल: फोटो लुकाएर सिधा, सफा पाठ */
+#poemModal.ae-design-minimal .poem-cover-large{display:none}
+#poemModal.ae-design-minimal #modalBody{max-width:540px}
+#poemModal.ae-design-minimal .poem-title-large{
+  font-weight:600;font-size:23px;border:0;padding-bottom:4px;
+}
+#poemModal.ae-design-minimal .poem-content{
+  font-family:"Noto Sans Devanagari",sans-serif;line-height:2.15;
+}
+
+/* पुरानो पाना: हल्का खैरो कागज, तेर्सो अक्षर, बीचमा मिल्ने */
+#poemModal.ae-design-vintage .modal-content{background:#f1e6cf}
+#poemModal.ae-design-vintage .poem-title-large{
+  font-style:italic;text-align:center;border:0;color:#4a3414;
+}
+#poemModal.ae-design-vintage .poem-content{
+  font-style:italic;text-align:center;color:#4a3414;
+}
+#poemModal.ae-design-vintage .poem-cover-large{filter:sepia(.35) contrast(1.05)}
