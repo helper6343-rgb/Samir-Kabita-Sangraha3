@@ -26,6 +26,7 @@
   var ABOUT = Object.assign({}, DEFAULT_ABOUT);
   var TOKEN_KEY = 'spg_admin_token';
   var PHONE_KEY = 'spg_admin_phone';
+  var EDIT_MODE_KEY = 'spg_edit_mode';
   var ADMIN_FILE = 'data/admin.json';
   var ABOUT_FILE = 'data/about.json';
   var PBKDF2_ITER = 250000;
@@ -130,6 +131,8 @@ textarea.sp-input{min-height:88px;line-height:1.7;resize:vertical}\
   function setToken(t) { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (e) {} }
   function phoneNum() { try { return localStorage.getItem(PHONE_KEY) || ''; } catch (e) { return ''; } }
   function setPhone(p) { try { p ? localStorage.setItem(PHONE_KEY, p) : localStorage.removeItem(PHONE_KEY); } catch (e) {} }
+  function editMode() { try { return localStorage.getItem(EDIT_MODE_KEY) === '1'; } catch (e) { return false; } }
+  function setEditMode(v) { try { v ? localStorage.setItem(EDIT_MODE_KEY, '1') : localStorage.removeItem(EDIT_MODE_KEY); } catch (e) {} }
   function ghHeaders(t) { return { Authorization: 'Bearer ' + t, Accept: 'application/vnd.github+json' }; }
   function ghUrl(path) { return 'https://api.github.com/repos/' + REPO + '/contents/' + path; }
   async function ghGet(path, t) {
@@ -502,12 +505,18 @@ textarea.sp-input{min-height:88px;line-height:1.7;resize:vertical}\
   /* =====================================================================
      3-dot menu मा item थप्ने
      ===================================================================== */
-  var aboutLink, loginLink, settingsLink;
+  var aboutLink, loginLink, settingsLink, editModeLink, addPostLink;
   function refreshMenu() {
     if (!loginLink) return;
     loginLink.innerHTML = token() ? '🔓 <span>लगआउट</span>' : '🔐 <span>लगइन</span>';
-    if (settingsLink) settingsLink.style.display = token() ? '' : 'none';
-    document.body.classList.toggle('spg-admin', isLoggedIn());
+    var li = isLoggedIn();
+    if (settingsLink) settingsLink.style.display = li ? '' : 'none';
+    if (editModeLink) editModeLink.style.display = li ? '' : 'none';
+    document.body.classList.toggle('spg-admin', li);
+    var em = li && editMode();
+    document.body.classList.toggle('spg-edit-mode', em);
+    if (editModeLink) editModeLink.innerHTML = em ? '✅ <span>सम्पादन मोड: चालू</span>' : '✏️ <span>सम्पादन मोड: बन्द</span>';
+    if (addPostLink) addPostLink.style.display = em ? '' : 'none';
   }
   function buildMenu() {
     var menu = document.getElementById('dropdownMenu');
@@ -523,6 +532,24 @@ textarea.sp-input{min-height:88px;line-height:1.7;resize:vertical}\
     settingsLink.href = '#'; settingsLink.id = 'spMenuSettings';
     settingsLink.innerHTML = '⚙️ <span>सेटिङ</span>';
     settingsLink.addEventListener('click', function (e) { e.preventDefault(); open(settingsOv); });
+
+    editModeLink = document.createElement('a');
+    editModeLink.href = '#'; editModeLink.id = 'spMenuEditMode';
+    editModeLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      setEditMode(!editMode());
+      refreshMenu();
+      toast(editMode() ? 'सम्पादन मोड चालू भयो' : 'सम्पादन मोड बन्द भयो');
+    });
+
+    addPostLink = document.createElement('a');
+    addPostLink.href = '#'; addPostLink.id = 'spMenuAddPost';
+    addPostLink.innerHTML = '➕ <span>नयाँ रचना थप्नुस्</span>';
+    addPostLink.addEventListener('click', function (e) {
+      e.preventDefault(); closeMenu();
+      if (window.SPG_NEWPOST) window.SPG_NEWPOST.open();
+      else toast('लोड हुँदैछ, फेरि प्रयास गर्नुस्');
+    });
 
     loginLink = document.createElement('a');
     loginLink.href = '#'; loginLink.id = 'spMenuLogin';
@@ -540,9 +567,12 @@ textarea.sp-input{min-height:88px;line-height:1.7;resize:vertical}\
     if (divider) {
       menu.insertBefore(aboutLink, divider);
       menu.insertBefore(settingsLink, divider);
+      menu.insertBefore(editModeLink, divider);
+      menu.insertBefore(addPostLink, divider);
       menu.insertBefore(loginLink, divider);
     } else {
-      menu.appendChild(aboutLink); menu.appendChild(settingsLink); menu.appendChild(loginLink);
+      menu.appendChild(aboutLink); menu.appendChild(settingsLink);
+      menu.appendChild(editModeLink); menu.appendChild(addPostLink); menu.appendChild(loginLink);
     }
     refreshMenu();
   }

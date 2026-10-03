@@ -9,6 +9,8 @@
   var READ_RE = /^(पढ्नुस्|पढ्नुहोस्|पढ्नुस|read)/i;
   var TIME_RE = /(मिनेट|min)/i;
   var MAP_URL = 'data/book-covers.json';
+  var EXTRA_URL = 'data/extra-posts.json';
+  var EXTRA = [];
   var COVER_W = 900, COVER_H = 1200;   /* 3:4 */
   var MAP = {};
 
@@ -209,6 +211,7 @@
     document.body.classList.toggle('spg-admin', !!(a && a.isLoggedIn()));
   }
 
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function hash(s) {
     var h = 5381;
     for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
@@ -353,6 +356,68 @@
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedulePoemFit);
   }
 
+
+  /* ---------- थप रचनाहरू (admin ले एप बाटै थपेका नयाँ लेख/कविता) ---------- */
+  function loadExtra() {
+    return fetch(EXTRA_URL + '?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .catch(function () { return []; })
+      .then(function (j) { EXTRA = Array.isArray(j) ? j : []; });
+  }
+
+  function makeExtraCard(entry) {
+    var wrap = document.createElement('div');
+    wrap.className = 'bk-book';
+    wrap.dataset.extraId = entry.id;
+    var box = document.createElement('div');
+    box.className = 'bk-cover-box';
+    if (entry.cover) {
+      var im = document.createElement('img');
+      im.className = 'bk-full'; im.src = entry.cover; im.alt = entry.title || '';
+      box.appendChild(im);
+    } else {
+      box.classList.add('bk-noimg');
+      var ph = document.createElement('div'); ph.className = 'bk-fallback'; ph.textContent = '📖';
+      box.appendChild(ph);
+    }
+    var lb = document.createElement('div');
+    lb.className = 'bk-label'; lb.textContent = entry.genre || '';
+    var tt = document.createElement('div');
+    tt.className = 'bk-title'; tt.textContent = entry.title || ''; tt.title = entry.title || '';
+    wrap.appendChild(box); wrap.appendChild(lb); wrap.appendChild(tt);
+    wrap.addEventListener('click', function () { openExtraPost(entry); });
+    var outer = document.createElement('div');
+    outer.className = 'bk-extra-item';
+    outer.appendChild(wrap);
+    fitTitle(tt);
+    return outer;
+  }
+
+  function openExtraPost(entry) {
+    var body = document.getElementById('modalBody');
+    var modal = document.getElementById('poemModal');
+    if (!body || !modal) return;
+    var html = '';
+    if (entry.cover) html += '<div class="poem-cover-large"><img src="' + esc(entry.cover) + '" alt="' + esc(entry.title || '') + '"></div>';
+    html += '<h1 class="poem-title-large">' + esc(entry.title || '') + '</h1>';
+    html += '<div class="poem-content">' + esc(entry.text || '') + '</div>';
+    body.innerHTML = html;
+    modal.classList.add('open');
+    document.body.classList.add('modal-open');
+    if (window.SPG_fitPoem) setTimeout(window.SPG_fitPoem, 60);
+  }
+  window.SPG_openExtraPost = openExtraPost;
+
+  function renderExtra() {
+    var grid = document.getElementById('allCards');
+    if (!grid) return;
+    grid.querySelectorAll(':scope > .bk-extra-item').forEach(function (e) { e.remove(); });
+    for (var i = EXTRA.length - 1; i >= 0; i--) {
+      grid.insertBefore(makeExtraCard(EXTRA[i]), grid.firstChild);
+    }
+  }
+  window.SPG_EXTRA = { reload: function () { return loadExtra().then(renderExtra); }, list: function () { return EXTRA; } };
+
   /* ---------- सुरु ---------- */
   function loadMap() {
     return fetch(MAP_URL, { cache: 'no-store' })
@@ -367,6 +432,7 @@
     var grid = document.getElementById('allCards');
     if (grid) new MutationObserver(apply).observe(grid, { childList: true, subtree: true });
     loadMap().then(rebuildAll);
+    loadExtra().then(renderExtra);
     initPoemFit();
     setTimeout(apply, 500);
     setTimeout(syncAdmin, 800);
