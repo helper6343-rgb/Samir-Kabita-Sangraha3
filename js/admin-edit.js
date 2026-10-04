@@ -17,7 +17,6 @@
   var st = document.createElement('style');
   st.textContent = '\
 .ae-btn{display:none!important}\
-body.spg-admin .ae-btn{display:inline-flex!important}\
 .ae-ov{position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center}\
 .ae-ov.ae-open{display:flex}\
 .ae-sheet{width:100%;max-width:620px;max-height:92vh;overflow:auto;background:#faf6f0;color:#1a1a2e;border-radius:22px 22px 0 0;padding:22px 20px calc(26px + env(safe-area-inset-bottom,0px));font-family:"Noto Sans Devanagari","Tiro Devanagari Hindi",sans-serif;position:relative}\

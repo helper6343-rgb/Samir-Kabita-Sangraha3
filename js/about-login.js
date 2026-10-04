@@ -581,6 +581,17 @@ textarea.sp-input{min-height:88px;line-height:1.7;resize:vertical}\
   document.addEventListener('spg-admin-change', refreshMenu);
   loadAboutOverrides();
 
+  /* ⋮ मेनु: scroll गर्दा र बाहिर touch गर्दा आफैं बन्द होस् */
+  window.addEventListener('scroll', closeMenu, { passive: true });
+  document.addEventListener('click', function (e) {
+    var menu = document.getElementById('dropdownMenu');
+    var btn = document.getElementById('menuBtn');
+    if (!menu) return;
+    if (menu.contains(e.target)) return;
+    if (btn && btn.contains(e.target)) return;
+    closeMenu();
+  }, true);
+
   /* Aarko step (edit / cover) le yehi use garchha */
   window.SPG_ADMIN = {
     repo: REPO, branch: BRANCH,

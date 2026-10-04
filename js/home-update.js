@@ -450,6 +450,55 @@
   }
   window.SPG_EXTRA = { reload: function () { return loadExtra().then(renderExtra); }, list: function () { return EXTRA; } };
 
+
+  /* ---------- तल्लो nav: स्क्रोल तल गर्दा लुक्ने, माथि गर्दा देखिने ---------- */
+  function initNavAutoHide() {
+    var nav = document.querySelector('.bottom-nav');
+    if (!nav) return;
+    var lastY = window.scrollY, ticking = false;
+    function onScroll() {
+      var y = window.scrollY;
+      if (y > lastY + 6 && y > 80) nav.classList.add('nav-hidden');
+      else if (y < lastY - 6 || y < 80) nav.classList.remove('nav-hidden');
+      lastY = y; ticking = false;
+    }
+    window.addEventListener('scroll', function () {
+      if (!ticking) { requestAnimationFrame(onScroll); ticking = true; }
+    }, { passive: true });
+  }
+
+  /* ---------- कविता/लेख पढ्ने पेज: edit/bookmark/print सबै ⋮ भित्र ---------- */
+  function buildPoemMenuExtras() {
+    var menu = document.getElementById('poemMoreMenu');
+    if (!menu || document.getElementById('pmEditBtn')) return;
+
+    var editBtn = document.createElement('button');
+    editBtn.id = 'pmEditBtn'; editBtn.type = 'button'; editBtn.setAttribute('role', 'menuitem');
+    editBtn.className = 'pm-admin-only';
+    editBtn.innerHTML = '✏️ <span>सम्पादन</span>';
+    editBtn.addEventListener('click', function () {
+      var real = document.getElementById('aeBtn');
+      if (real) real.click();
+    });
+
+    var bmBtn = document.createElement('button');
+    bmBtn.id = 'pmBookmarkBtn'; bmBtn.type = 'button'; bmBtn.setAttribute('role', 'menuitem');
+    bmBtn.innerHTML = '🔖 <span>सेभ / हटाउनुस्</span>';
+    bmBtn.addEventListener('click', function () {
+      var real = document.getElementById('bookmarkBtn');
+      if (real) real.click();
+    });
+
+    var prBtn = document.createElement('button');
+    prBtn.id = 'pmPrintBtn'; prBtn.type = 'button'; prBtn.setAttribute('role', 'menuitem');
+    prBtn.innerHTML = '🖨️ <span>प्रिन्ट</span>';
+    prBtn.addEventListener('click', function () { window.print(); });
+
+    menu.insertBefore(prBtn, menu.firstChild);
+    menu.insertBefore(bmBtn, menu.firstChild);
+    menu.insertBefore(editBtn, menu.firstChild);
+  }
+
   /* ---------- सुरु ---------- */
   function loadMap() {
     return fetch(MAP_URL, { cache: 'no-store' })
@@ -466,6 +515,8 @@
     loadMap().then(rebuildAll);
     loadExtra().then(renderExtra);
     initPoemFit();
+    initNavAutoHide();
+    buildPoemMenuExtras();
     setTimeout(apply, 500);
     setTimeout(syncAdmin, 800);
   }
