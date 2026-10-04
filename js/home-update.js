@@ -380,6 +380,16 @@
       var ph = document.createElement('div'); ph.className = 'bk-fallback'; ph.textContent = '📖';
       box.appendChild(ph);
     }
+    var del = document.createElement('button');
+    del.className = 'bk-del'; del.type = 'button';
+    del.setAttribute('aria-label', 'रचना मेटाउनुस्');
+    del.textContent = '🗑️';
+    del.addEventListener('click', function (e) {
+      e.stopPropagation(); e.preventDefault();
+      if (confirm('"' + (entry.title || '') + '" मेटाउने हो? यो फिर्ता हुँदैन।')) deleteExtra(entry.id);
+    });
+    box.appendChild(del);
+
     var lb = document.createElement('div');
     lb.className = 'bk-label'; lb.textContent = entry.genre || '';
     var tt = document.createElement('div');
@@ -415,6 +425,28 @@
     for (var i = EXTRA.length - 1; i >= 0; i--) {
       grid.insertBefore(makeExtraCard(EXTRA[i]), grid.firstChild);
     }
+  }
+  async function deleteExtra(id) {
+    var a = admin();
+    if (!a || !a.isLoggedIn()) { toast('पहिले लगइन गर्नुस्'); return; }
+    try {
+      toast('मेटाउँदैछ…', 4000);
+      var ok = false;
+      for (var i = 0; i < 3 && !ok; i++) {
+        var f = await a.get(EXTRA_URL);
+        var cur = [];
+        if (f) { try { cur = JSON.parse(a.dec(f.content)); } catch (e) { cur = []; } }
+        if (!Array.isArray(cur)) cur = [];
+        var next = cur.filter(function (x) { return x.id !== id; });
+        var r = await a.put(EXTRA_URL, a.enc(JSON.stringify(next, null, 2)), 'Delete post ' + id, f && f.sha);
+        if (r.ok) ok = true;
+        else if (r.status !== 409 && r.status !== 422) throw new Error('मेटिएन (' + r.status + ')');
+      }
+      if (!ok) throw new Error('मेटिएन, फेरि प्रयास गर्नुस्।');
+      EXTRA = EXTRA.filter(function (x) { return x.id !== id; });
+      renderExtra();
+      toast('रचना मेटियो ✓');
+    } catch (e) { toast((e && e.message) || 'मेटिएन', 4000); }
   }
   window.SPG_EXTRA = { reload: function () { return loadExtra().then(renderExtra); }, list: function () { return EXTRA; } };
 
