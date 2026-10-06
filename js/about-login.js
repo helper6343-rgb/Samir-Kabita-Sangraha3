@@ -581,6 +581,11 @@ textarea.sp-input{min-height:88px;line-height:1.7;resize:vertical}\
   document.addEventListener('spg-admin-change', refreshMenu);
   loadAboutOverrides();
 
+  /* ⋮ मेनु: एप खुल्दा केही बेर आफैं देखिने समस्या नआओस् भनेर, सुरुमा जबरजस्ती बन्द */
+  closeMenu();
+  [0, 50, 200, 500, 1200].forEach(function (ms) { setTimeout(closeMenu, ms); });
+  window.addEventListener('load', closeMenu);
+
   /* ⋮ मेनु: scroll गर्दा र बाहिर touch गर्दा आफैं बन्द होस् */
   window.addEventListener('scroll', closeMenu, { passive: true });
   document.addEventListener('click', function (e) {

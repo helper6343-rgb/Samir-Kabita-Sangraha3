@@ -177,7 +177,9 @@
 
       $('#npTitle').value = ''; $('#npText').value = ''; $('#npCoverPrev').src = ''; pendingBlob = null;
       m.textContent = ''; closeOv();
-      if (window.SPG_EXTRA) window.SPG_EXTRA.reload();
+      /* GitHub Pages लाई अपडेट हुन केही समय लाग्छ, त्यसैले फेरि fetch नगरी
+         सिधै यहीँ देखाइदिने (optimistic) — फ्ल्यास भएर हराउने समस्या नआओस् */
+      if (window.SPG_EXTRA) window.SPG_EXTRA.addLocal(entry);
       toast('रचना प्रकाशित भयो ✓');
     } catch (e) {
       m.className = 'sp-msg err'; m.textContent = (e && e.message) || 'सेभ भएन।';

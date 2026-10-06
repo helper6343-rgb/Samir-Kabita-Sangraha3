@@ -21,13 +21,11 @@
     clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove('show'); }, ms || 2400);
   }
 
-  function movePopularToEnd() {
+  function hidePopularSection() {
     var pop = document.getElementById('popularCards');
-    var all = document.getElementById('allCards');
-    if (!pop || !all) return;
+    if (!pop) return;
     var popSec = pop.closest('section') || pop.parentElement;
-    var allSec = all.closest('section') || all.parentElement;
-    if (allSec.nextElementSibling !== popSec) allSec.after(popSec);
+    if (popSec && popSec.style.display !== 'none') popSec.style.display = 'none';
   }
 
   /* ---------- card bata jaankari ---------- */
@@ -192,10 +190,16 @@
   }
 
   function apply() {
-    movePopularToEnd();
+    hidePopularSection();
     var grid = document.getElementById('allCards');
     if (!grid) return;
     Array.prototype.forEach.call(grid.children, bookify);
+    /* साइटको आफ्नै कोडले #allCards फेरि बनायो भने (जस्तै filter/search),
+       हाम्रा थप रचनाहरू हराउन सक्छन् — सङ्ख्या नमिले फेरि देखाइदिने */
+    if (EXTRA.length) {
+      var have = grid.querySelectorAll(':scope > .bk-extra-item').length;
+      if (have !== EXTRA.length) renderExtra();
+    }
   }
 
   function rebuildAll() {
@@ -448,8 +452,44 @@
       toast('रचना मेटियो ✓');
     } catch (e) { toast((e && e.message) || 'मेटिएन', 4000); }
   }
-  window.SPG_EXTRA = { reload: function () { return loadExtra().then(renderExtra); }, list: function () { return EXTRA; } };
+  window.SPG_EXTRA = {
+    reload: function () { return loadExtra().then(renderExtra); },
+    list: function () { return EXTRA; },
+    /* नयाँ रचना सेभ भएपछि, GitHub Pages ले साइट अपडेट गर्न केही समय लिन सक्छ।
+       त्यसैले फेरि fetch नगरी, थप्यै-थपि (optimistic) यहीँ देखाइदिने — फ्ल्यास भएर हराउँदैन */
+    addLocal: function (entry) { EXTRA.unshift(entry); renderExtra(); }
+  };
 
+
+  /* ---------- कुनै पनि खुला मोडल (कविता/सेभ/समीर AI) मा side बाट तानेर back ---------- */
+  function initEdgeSwipeBack() {
+    var EDGE = 28, THRESH = 70, MAX_Y = 70;
+    var startX = 0, startY = 0, tracking = false;
+    document.addEventListener('touchstart', function (e) {
+      var t = e.touches && e.touches[0];
+      if (!t) return;
+      tracking = t.clientX <= EDGE;
+      startX = t.clientX; startY = t.clientY;
+    }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      if (!tracking) return;
+      tracking = false;
+      var t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      var dx = t.clientX - startX, dy = Math.abs(t.clientY - startY);
+      if (dx > THRESH && dy < MAX_Y) triggerBack();
+    }, { passive: true });
+    function triggerBack() {
+      var ids = ['poemModal', 'bookmarkModal', 'sameerAIModal'];
+      for (var i = 0; i < ids.length; i++) {
+        var m = document.getElementById(ids[i]);
+        if (m && m.classList.contains('open')) {
+          var btn = m.querySelector('.modal-back');
+          if (btn) { btn.click(); return; }
+        }
+      }
+    }
+  }
 
   /* ---------- तल्लो nav: स्क्रोल तल गर्दा लुक्ने, माथि गर्दा देखिने ---------- */
   function initNavAutoHide() {
@@ -517,6 +557,7 @@
     initPoemFit();
     initNavAutoHide();
     buildPoemMenuExtras();
+    initEdgeSwipeBack();
     setTimeout(apply, 500);
     setTimeout(syncAdmin, 800);
   }
