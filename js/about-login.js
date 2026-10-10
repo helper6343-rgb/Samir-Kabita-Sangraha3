@@ -581,10 +581,28 @@ textarea.sp-input{min-height:88px;line-height:1.7;resize:vertical}\
   document.addEventListener('spg-admin-change', refreshMenu);
   loadAboutOverrides();
 
-  /* ⋮ मेनु: एप खुल्दा केही बेर आफैं देखिने समस्या नआओस् भनेर, सुरुमा जबरजस्ती बन्द */
-  closeMenu();
-  [0, 50, 200, 500, 1200].forEach(function (ms) { setTimeout(closeMenu, ms); });
-  window.addEventListener('load', closeMenu);
+  /* ⋮ मेनु: एप खुल्दा केही सेकेन्ड आफैं देखिने समस्या — सुरुमा जबरजस्ती लुकाएर राख्ने,
+     मान्छेले आफैं ⋮ थिचेपछि मात्र सामान्य व्यवहारमा फर्कने */
+  (function suppressAutoMenu() {
+    var menu = document.getElementById('dropdownMenu');
+    var btn = document.getElementById('menuBtn');
+    if (!menu) return;
+    menu.style.display = 'none';
+    var obs = new MutationObserver(function () {
+      if (getComputedStyle(menu).display !== 'none') menu.style.display = 'none';
+    });
+    obs.observe(menu, { attributes: true, attributeFilter: ['class', 'style'] });
+    var endTimer = setTimeout(lift, 2500);
+    function lift() {
+      clearTimeout(endTimer);
+      obs.disconnect();
+      menu.style.display = '';
+    }
+    if (btn) btn.addEventListener('click', lift, true);
+    document.addEventListener('touchstart', function (e) {
+      if (btn && btn.contains(e.target)) lift();
+    }, true);
+  })();
 
   /* ⋮ मेनु: scroll गर्दा र बाहिर touch गर्दा आफैं बन्द होस् */
   window.addEventListener('scroll', closeMenu, { passive: true });
