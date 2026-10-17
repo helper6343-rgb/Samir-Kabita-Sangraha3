@@ -2,6 +2,7 @@
 <html lang="ne" data-theme="light">
 <head>
   <meta charset="UTF-8" />
+  <style>#dropdownMenu:not(.open),.dropdown-menu:not(.open){display:none!important}</style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>समीर साहित्य संग्रह</title>
   <link rel="manifest" href="manifest.json" />
@@ -51,8 +52,9 @@
 <div class="dropdown-menu" id="dropdownMenu">
   <a href="#" onclick="showRandomPoem()">🎲 <span data-en="Random Poem" data-ne="अनियमित कविता">अनियमित कविता</span></a>
   <a href="#" onclick="showBookmarks()">🔖 <span data-en="Bookmarks" data-ne="सेभ गरिएका">सेभ गरिएका</span></a>
+  <a href="#" id="spMenuGenre">🏷️ <span data-en="Genres" data-ne="विधा">विधा</span></a>
+  <a href="#" id="spMenuUpcoming">🔜 <span data-en="Upcoming" data-ne="आउँदै छन्">आउँदै छन्</span></a>
   <a href="#" onclick="window.print()">🖨️ <span data-en="Print" data-ne="प्रिन्ट">प्रिन्ट</span></a>
-  <a href="https://github.com/samir/kavita-sangrah" target="_blank">💻 <span data-en="GitHub" data-ne="GitHub">GitHub</span></a>
   <div class="menu-divider"></div>
   <div class="lang-toggle-wrap">
     <span>EN / नेपाली</span>
