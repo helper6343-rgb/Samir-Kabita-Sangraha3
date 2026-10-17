@@ -587,21 +587,44 @@ textarea.sp-input{min-height:88px;line-height:1.7;resize:vertical}\
     var menu = document.getElementById('dropdownMenu');
     var btn = document.getElementById('menuBtn');
     if (!menu) return;
-    menu.style.display = 'none';
-    var obs = new MutationObserver(function () {
-      if (getComputedStyle(menu).display !== 'none') menu.style.display = 'none';
-    });
-    obs.observe(menu, { attributes: true, attributeFilter: ['class', 'style'] });
-    var endTimer = setTimeout(lift, 2500);
+    var obs = null, endTimer = null;
+
+    function forceClosedNow() {
+      ['open', 'show', 'active', 'visible'].forEach(function (c) { menu.classList.remove(c); });
+      menu.style.display = 'none';
+    }
     function lift() {
-      clearTimeout(endTimer);
-      obs.disconnect();
+      if (endTimer) clearTimeout(endTimer);
+      if (obs) obs.disconnect();
       menu.style.display = '';
     }
+    function arm() {
+      forceClosedNow();
+      if (obs) obs.disconnect();
+      obs = new MutationObserver(function () {
+        ['open', 'show', 'active', 'visible'].forEach(function (c) { menu.classList.remove(c); });
+        menu.style.display = 'none';
+      });
+      obs.observe(menu, { attributes: true, attributeFilter: ['class', 'style'] });
+      if (endTimer) clearTimeout(endTimer);
+      endTimer = setTimeout(lift, 2500);
+    }
+
+    arm();
     if (btn) btn.addEventListener('click', lift, true);
     document.addEventListener('touchstart', function (e) {
       if (btn && btn.contains(e.target)) lift();
     }, true);
+
+    /* App background बाट फर्कँदा (bfcache restore) पुरानो "खुला" अवस्था फ्ल्यास
+       भएर देखिने समस्या — त्यस बेला यी script फेरि चल्दैनन्, त्यसैले pageshow/
+       visibilitychange मा फेरि जबरजस्ती बन्द गरेर re-arm गर्ने */
+    window.addEventListener('pageshow', function (e) {
+      if (e.persisted) arm();
+    });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') forceClosedNow();
+    });
   })();
 
   /* ⋮ मेनु: scroll गर्दा र बाहिर touch गर्दा आफैं बन्द होस् */
