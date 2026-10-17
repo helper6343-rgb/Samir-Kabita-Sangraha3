@@ -77,13 +77,15 @@
 }
 body.spg-admin.spg-edit-mode .bk-cam{display:flex}
 
-/* Vidha ko talo ma sano akshar ma शीर्षक (ek line) */
+/* Vidha ko talo ma शीर्षक — lamo bhaye pani sabai ko akshar ustai (sano nahune),
+   lamo title 2 line samma wrap huncha (teesro line bhaye ... dekhincha) */
 .bk-label{margin-top:10px;}
 .bk-title{
-  display:block;text-align:center;margin-top:3px;
-  font-size:13px;font-weight:400;line-height:1.5;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  overflow:hidden;text-align:center;margin-top:3px;
+  font-size:13px!important;font-weight:400;line-height:1.5;
   color:#5b5566;opacity:.95;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  white-space:normal;
 }
 [data-theme="dark"] .bk-title{color:#c9c4d6}
 
