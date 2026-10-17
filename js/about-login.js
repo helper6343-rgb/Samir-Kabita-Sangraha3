@@ -564,16 +564,14 @@ textarea.sp-input{min-height:88px;line-height:1.7;resize:vertical}\
       } else { mode(false); open(loginOv); }
     });
 
-    if (divider) {
-      menu.insertBefore(aboutLink, divider);
-      menu.insertBefore(settingsLink, divider);
-      menu.insertBefore(editModeLink, divider);
-      menu.insertBefore(addPostLink, divider);
-      menu.insertBefore(loginLink, divider);
-    } else {
-      menu.appendChild(aboutLink); menu.appendChild(settingsLink);
-      menu.appendChild(editModeLink); menu.appendChild(addPostLink); menu.appendChild(loginLink);
-    }
+    /* लगइन भएपछि admin-only option हरू मेनुको सबैभन्दा माथि देखियोस् भनेर
+       पहिलो स्थानमा राख्ने (random/विधा/आउँदै छन्/प्रिन्ट भन्दा माथि) */
+    var top = menu.firstChild;
+    menu.insertBefore(loginLink, top);
+    menu.insertBefore(addPostLink, loginLink);
+    menu.insertBefore(editModeLink, addPostLink);
+    menu.insertBefore(settingsLink, editModeLink);
+    menu.insertBefore(aboutLink, settingsLink);
     refreshMenu();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildMenu);

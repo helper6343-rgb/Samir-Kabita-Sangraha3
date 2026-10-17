@@ -416,11 +416,32 @@
     html += '<h1 class="poem-title-large">' + esc(entry.title || '') + '</h1>';
     html += '<div class="poem-content">' + esc(entry.text || '') + '</div>';
     body.innerHTML = html;
+    body.dataset.extraId = entry.id;             /* "थप रचना" हो भनेर चिन्ह लगाउने —
+      native-मात्र ✏️ सम्पादन tool ले गलत title मा override नलेखोस् भनेर */
     modal.classList.add('open');
     document.body.classList.add('modal-open');
     if (window.SPG_fitPoem) setTimeout(window.SPG_fitPoem, 60);
   }
   window.SPG_openExtraPost = openExtraPost;
+
+  /* Native कविता (app.js को openPoem) खुल्दा माथिको चिन्ह हटाउने, नत्र त्यो
+     native कविता लाई पनि "थप रचना" सम्झेर सम्पादन रोकिदिन्छ */
+  (function guardExtraEdit() {
+    var tries = 0;
+    var t = setInterval(function () {
+      tries++;
+      if (typeof window.openPoem === 'function' && !window.openPoem.__spgWrapped) {
+        var orig = window.openPoem;
+        window.openPoem = function () {
+          var body = document.getElementById('modalBody');
+          if (body) delete body.dataset.extraId;
+          return orig.apply(this, arguments);
+        };
+        window.openPoem.__spgWrapped = true;
+        clearInterval(t);
+      } else if (tries > 40) clearInterval(t);
+    }, 100);
+  })();
 
   function renderExtra() {
     var grid = document.getElementById('allCards');
@@ -517,6 +538,11 @@
     editBtn.className = 'pm-admin-only';
     editBtn.innerHTML = '✏️ <span>सम्पादन</span>';
     editBtn.addEventListener('click', function () {
+      var body = document.getElementById('modalBody');
+      if (body && body.dataset.extraId) {
+        toast('थप रचना यहाँबाट सम्पादन गर्न मिल्दैन। गृहपृष्ठमा 🗑️ बाट मेटाएर फेरि थप्नुस्।', 4000);
+        return;
+      }
       var real = document.getElementById('aeBtn');
       if (real) real.click();
     });
@@ -539,6 +565,123 @@
     menu.insertBefore(editBtn, menu.firstChild);
   }
 
+  /* ---------- विधा (genre) छान्ने + आउँदै छन् (upcoming) ---------- */
+  var UPCOMING_URL = 'data/upcoming.json';
+  var genreFilterActive = null;
+
+  function sheetOverlay(id) {
+    var ov = document.createElement('div');
+    ov.id = id;
+    ov.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;';
+    ov.innerHTML = '<div class="spg-sheet" style="position:relative;width:100%;max-width:560px;max-height:80vh;overflow:auto;background:var(--bg,#faf6f0);color:inherit;border-radius:22px 22px 0 0;padding:24px 20px calc(26px + env(safe-area-inset-bottom,0px));"></div>';
+    ov.addEventListener('click', function (e) { if (e.target === ov) ov.style.display = 'none'; });
+    document.body.appendChild(ov);
+    return ov;
+  }
+  function openSheet(ov) { ov.style.display = 'flex'; }
+  function closeSheet(ov) { ov.style.display = 'none'; }
+
+  /* ---- विधा (genre) ---- */
+  var genreOv = sheetOverlay('spgGenreSheet');
+  function collectGenres() {
+    var counts = {};
+    document.querySelectorAll('#allCards > *').forEach(function (card) {
+      var g = '';
+      if (card.classList.contains('bk-extra-item')) {
+        var lb = card.querySelector('.bk-label');
+        g = lb ? lb.textContent.trim() : '';
+      } else {
+        g = card.dataset ? (card.dataset.label || '') : '';
+      }
+      if (g) counts[g] = (counts[g] || 0) + 1;
+    });
+    return counts;
+  }
+  function applyGenreFilter(g) {
+    genreFilterActive = g || null;
+    document.querySelectorAll('#allCards > *').forEach(function (card) {
+      var cg = '';
+      if (card.classList.contains('bk-extra-item')) {
+        var lb = card.querySelector('.bk-label');
+        cg = lb ? lb.textContent.trim() : '';
+      } else {
+        cg = card.dataset ? (card.dataset.label || '') : '';
+      }
+      var show = !genreFilterActive || cg === genreFilterActive;
+      card.style.setProperty('display', show ? 'block' : 'none', 'important');
+    });
+  }
+  function renderGenreSheet() {
+    var sheet = genreOv.querySelector('.spg-sheet');
+    var counts = collectGenres();
+    var keys = Object.keys(counts).sort();
+    var html = '<h2 style="text-align:center;margin:0 0 4px;font-size:20px;">🏷️ विधा छान्नुस्</h2>';
+    html += '<div style="text-align:center;font-size:13px;opacity:.7;margin-bottom:16px;">कुनै एउटा विधा छानेर त्यही खालका रचना मात्र हेर्नुस्</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">';
+    html += '<button class="spg-genre-chip" data-g="" style="padding:9px 16px;border-radius:999px;border:1px solid rgba(232,196,122,.5);background:' + (!genreFilterActive ? '#e8710a;color:#fff' : 'transparent') + ';font-size:14px;cursor:pointer;">सबै</button>';
+    keys.forEach(function (g) {
+      var active = g === genreFilterActive;
+      html += '<button class="spg-genre-chip" data-g="' + esc(g) + '" style="padding:9px 16px;border-radius:999px;border:1px solid rgba(232,196,122,.5);background:' + (active ? '#e8710a;color:#fff' : 'transparent') + ';font-size:14px;cursor:pointer;">' + esc(g) + ' (' + counts[g] + ')</button>';
+    });
+    html += '</div>';
+    sheet.innerHTML = html;
+    sheet.querySelectorAll('.spg-genre-chip').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        applyGenreFilter(btn.dataset.g || null);
+        closeSheet(genreOv);
+        toast(genreFilterActive ? ('"' + genreFilterActive + '" मात्र देखाइँदैछ') : 'सबै रचना देखाइँदैछ');
+      });
+    });
+  }
+
+  /* ---- आउँदै छन् (upcoming) ---- */
+  var upcomingOv = sheetOverlay('spgUpcomingSheet');
+  var UPCOMING = [];
+  function loadUpcoming() {
+    return fetch(UPCOMING_URL + '?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .catch(function () { return []; })
+      .then(function (j) { UPCOMING = Array.isArray(j) ? j : []; });
+  }
+  function renderUpcomingSheet() {
+    var sheet = upcomingOv.querySelector('.spg-sheet');
+    var html = '<h2 style="text-align:center;margin:0 0 4px;font-size:20px;">🔜 आउँदै छन्</h2>';
+    if (!UPCOMING.length) {
+      html += '<div style="text-align:center;padding:30px 10px;opacity:.65;font-size:14px;">अहिलेलाई कुनै रचना सूचीमा राखिएको छैन।</div>';
+    } else {
+      html += '<div style="display:flex;flex-direction:column;gap:14px;margin-top:14px;">';
+      UPCOMING.forEach(function (u) {
+        html += '<div style="padding:14px 16px;border-radius:14px;border:1px solid rgba(232,196,122,.4);">' +
+          '<div style="font-weight:700;font-size:16px;margin-bottom:4px;">' + esc(u.title || '') + '</div>' +
+          (u.note ? '<div style="font-size:13.5px;opacity:.75;line-height:1.6;">' + esc(u.note) + '</div>' : '') +
+          '</div>';
+      });
+      html += '</div>';
+    }
+    sheet.innerHTML = html;
+  }
+
+  function initGenreUpcoming() {
+    var gBtn = document.getElementById('spMenuGenre');
+    var uBtn = document.getElementById('spMenuUpcoming');
+    if (gBtn) gBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var m = document.getElementById('dropdownMenu');
+      if (m) ['open', 'show', 'active', 'visible'].forEach(function (c) { m.classList.remove(c); });
+      renderGenreSheet();
+      openSheet(genreOv);
+    });
+    if (uBtn) uBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var m = document.getElementById('dropdownMenu');
+      if (m) ['open', 'show', 'active', 'visible'].forEach(function (c) { m.classList.remove(c); });
+      renderUpcomingSheet();
+      openSheet(upcomingOv);
+      loadUpcoming().then(renderUpcomingSheet);
+    });
+    loadUpcoming();
+  }
+
   /* ---------- सुरु ---------- */
   function loadMap() {
     return fetch(MAP_URL, { cache: 'no-store' })
@@ -558,6 +701,7 @@
     initNavAutoHide();
     buildPoemMenuExtras();
     initEdgeSwipeBack();
+    initGenreUpcoming();
     setTimeout(apply, 500);
     setTimeout(syncAdmin, 800);
   }
