@@ -505,18 +505,25 @@ textarea.sp-input{min-height:88px;line-height:1.7;resize:vertical}\
   /* =====================================================================
      3-dot menu मा item थप्ने
      ===================================================================== */
-  var aboutLink, loginLink, settingsLink, editModeLink, addPostLink;
+  var aboutLink, loginLink, settingsLink, editModeLink, addPostLink, viewAsLink;
+  var VIEW_AS_KEY = 'spg_view_as';
+  function viewAsOn() { try { return sessionStorage.getItem(VIEW_AS_KEY) === '1'; } catch (e) { return false; } }
+  function setViewAs(v) { try { v ? sessionStorage.setItem(VIEW_AS_KEY, '1') : sessionStorage.removeItem(VIEW_AS_KEY); } catch (e) {} }
   function refreshMenu() {
     if (!loginLink) return;
     loginLink.innerHTML = token() ? '🔓 <span>लगआउट</span>' : '🔐 <span>लगइन</span>';
     var li = isLoggedIn();
     if (settingsLink) settingsLink.style.display = li ? '' : 'none';
     if (editModeLink) editModeLink.style.display = li ? '' : 'none';
+    if (viewAsLink) viewAsLink.style.display = li ? '' : 'none';
     document.body.classList.toggle('spg-admin', li);
     var em = li && editMode();
     document.body.classList.toggle('spg-edit-mode', em);
     if (editModeLink) editModeLink.innerHTML = em ? '✅ <span>सम्पादन मोड: चालू</span>' : '✏️ <span>सम्पादन मोड: बन्द</span>';
     if (addPostLink) addPostLink.style.display = em ? '' : 'none';
+    var va = li && viewAsOn();
+    document.body.classList.toggle('spg-view-as', va);
+    if (viewAsLink) viewAsLink.innerHTML = va ? '🔧 <span>Admin मोडमा फर्कनुस्</span>' : '👁️ <span>View as (अरुले देख्ने गरी हेर्नुस्)</span>';
   }
   function buildMenu() {
     var menu = document.getElementById('dropdownMenu');
@@ -551,6 +558,15 @@ textarea.sp-input{min-height:88px;line-height:1.7;resize:vertical}\
       else toast('लोड हुँदैछ, फेरि प्रयास गर्नुस्');
     });
 
+    viewAsLink = document.createElement('a');
+    viewAsLink.href = '#'; viewAsLink.id = 'spMenuViewAs';
+    viewAsLink.addEventListener('click', function (e) {
+      e.preventDefault(); closeMenu();
+      setViewAs(!viewAsOn());
+      refreshMenu();
+      toast(viewAsOn() ? 'अब अरुले जस्तो देख्छन् त्यस्तै देखिँदैछ' : 'Admin मोडमा फर्किनुभयो');
+    });
+
     loginLink = document.createElement('a');
     loginLink.href = '#'; loginLink.id = 'spMenuLogin';
     loginLink.addEventListener('click', function (e) {
@@ -568,7 +584,8 @@ textarea.sp-input{min-height:88px;line-height:1.7;resize:vertical}\
        पहिलो स्थानमा राख्ने (random/विधा/आउँदै छन्/प्रिन्ट भन्दा माथि) */
     var top = menu.firstChild;
     menu.insertBefore(loginLink, top);
-    menu.insertBefore(addPostLink, loginLink);
+    menu.insertBefore(viewAsLink, loginLink);
+    menu.insertBefore(addPostLink, viewAsLink);
     menu.insertBefore(editModeLink, addPostLink);
     menu.insertBefore(settingsLink, editModeLink);
     menu.insertBefore(aboutLink, settingsLink);

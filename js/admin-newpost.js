@@ -43,6 +43,7 @@
   function openOv() { ov.classList.add('sp-open'); }
   function closeOv() { ov.classList.remove('sp-open'); }
   var $ = function (s) { return ov.querySelector(s); };
+  var editingId = null, editingCover = '';
 
   /* ---------- Crop overlay (3:4, book cover) ---------- */
   var cropOv = document.createElement('div');
@@ -147,19 +148,20 @@
     if (!text) { m.className = 'sp-msg err'; m.textContent = 'पाठ लेख्नुस्।'; return; }
     var btn = this; btn.disabled = true;
     try {
-      var id = 'x' + Date.now().toString(36) + hash(title);
-      var cover = '';
+      var isEdit = !!editingId;
+      var id = isEdit ? editingId : ('x' + Date.now().toString(36) + hash(title));
+      var cover = isEdit ? editingCover : '';
       if (pendingBlob) {
         m.textContent = 'फोटो अपलोड हुँदैछ…';
         var b64 = await b64FromBlob(pendingBlob);
         var path = 'covers/book/extra-' + id + '.jpg';
-        var r1 = await a.put(path, b64, 'New post cover: ' + title);
+        var r1 = await a.put(path, b64, (isEdit ? 'Update' : 'New') + ' post cover: ' + title);
         if (!r1.ok) throw new Error('फोटो अपलोड भएन (' + r1.status + ')');
         cover = path + '?v=' + Date.now();
       }
       var words = text.split(/\s+/).filter(Boolean).length;
       var minutes = Math.max(1, Math.round(words / 120));
-      var entry = { id: id, title: title, genre: genre, text: text, cover: cover, minutes: minutes, created: Date.now() };
+      var entry = { id: id, title: title, genre: genre, text: text, cover: cover, minutes: minutes, created: isEdit ? undefined : Date.now() };
 
       m.textContent = 'सेभ हुँदैछ…';
       var ok = false;
@@ -168,19 +170,29 @@
         var cur = [];
         if (ex) { try { cur = JSON.parse(a.dec(ex.content)); } catch (e) { cur = []; } }
         if (!Array.isArray(cur)) cur = [];
-        cur.push(entry);
-        var r2 = await a.put(EXTRA_URL, a.enc(JSON.stringify(cur, null, 2)), 'Add post: ' + title, ex && ex.sha);
+        if (isEdit) {
+          var idx = -1;
+          for (var j = 0; j < cur.length; j++) { if (cur[j].id === id) { idx = j; break; } }
+          if (!entry.created) entry.created = (idx !== -1 && cur[idx].created) || Date.now();
+          if (idx !== -1) cur[idx] = entry; else cur.push(entry);
+        } else {
+          cur.push(entry);
+        }
+        var r2 = await a.put(EXTRA_URL, a.enc(JSON.stringify(cur, null, 2)), (isEdit ? 'Update post: ' : 'Add post: ') + title, ex && ex.sha);
         if (r2.ok) ok = true;
         else if (r2.status !== 409 && r2.status !== 422) throw new Error('सेभ भएन (' + r2.status + ')');
       }
       if (!ok) throw new Error('सेभ भएन, फेरि प्रयास गर्नुस्।');
 
       $('#npTitle').value = ''; $('#npText').value = ''; $('#npCoverPrev').src = ''; pendingBlob = null;
+      editingId = null; editingCover = '';
       m.textContent = ''; closeOv();
       /* GitHub Pages लाई अपडेट हुन केही समय लाग्छ, त्यसैले फेरि fetch नगरी
          सिधै यहीँ देखाइदिने (optimistic) — फ्ल्यास भएर हराउने समस्या नआओस् */
-      if (window.SPG_EXTRA) window.SPG_EXTRA.addLocal(entry);
-      toast('रचना प्रकाशित भयो ✓');
+      if (window.SPG_EXTRA) {
+        if (isEdit) window.SPG_EXTRA.updateLocal(entry); else window.SPG_EXTRA.addLocal(entry);
+      }
+      toast(isEdit ? 'रचना अपडेट भयो ✓' : 'रचना प्रकाशित भयो ✓');
     } catch (e) {
       m.className = 'sp-msg err'; m.textContent = (e && e.message) || 'सेभ भएन।';
     } finally { btn.disabled = false; }
@@ -189,8 +201,23 @@
   window.SPG_NEWPOST = {
     open: function () {
       if (!admin() || !admin().isLoggedIn()) { toast('पहिले लगइन गर्नुस्'); return; }
+      editingId = null; editingCover = '';
+      ov.querySelector('h2').textContent = '➕ नयाँ रचना थप्नुस्';
+      ov.querySelector('#npSave').textContent = 'प्रकाशित गर्नुस्';
       $('#npTitle').value = ''; $('#npText').value = ''; $('#npCoverPrev').src = '';
       $('#npGenre').value = 'कविता'; pendingBlob = null; $('#npMsg').textContent = '';
+      openOv();
+    },
+    openEdit: function (entry) {
+      if (!admin() || !admin().isLoggedIn()) { toast('पहिले लगइन गर्नुस्'); return; }
+      editingId = entry.id; editingCover = entry.cover || '';
+      ov.querySelector('h2').textContent = '✏️ रचना सम्पादन';
+      ov.querySelector('#npSave').textContent = 'सेभ गर्नुस्';
+      $('#npTitle').value = entry.title || '';
+      $('#npText').value = entry.text || '';
+      $('#npGenre').value = entry.genre || 'कविता';
+      $('#npCoverPrev').src = entry.cover || '';
+      pendingBlob = null; $('#npMsg').textContent = '';
       openOv();
     }
   };
