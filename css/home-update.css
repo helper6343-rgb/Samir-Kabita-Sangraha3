@@ -69,13 +69,32 @@
   position:absolute;inset:0;width:100%;height:100%;
   object-fit:cover;display:block;
 }
-.bk-cam{
-  position:absolute;right:8px;top:8px;z-index:3;
-  width:40px;height:40px;border-radius:50%;border:0;
-  background:rgba(0,0,0,.62);color:#fff;font-size:19px;line-height:1;
-  display:none;align-items:center;justify-content:center;cursor:pointer;
+
+/* ===== कार्ड माथिको ⋮ (kebab): सम्पादन + मेटाउनुस् — native र थप दुवै रचनामा,
+   admin लगइन + सम्पादन मोड चालू हुँदा मात्र देखिने; "View as" मा लुक्ने ===== */
+.bk-kebab-wrap{ position:absolute;right:8px;top:8px;z-index:4; display:none; }
+body.spg-admin.spg-edit-mode .bk-admin-only.bk-kebab-wrap{ display:block; }
+body.spg-view-as .bk-kebab-wrap{ display:none!important; }
+.bk-kebab{
+  width:36px;height:36px;border-radius:50%;border:0;
+  background:rgba(0,0,0,.62);color:#fff;font-size:19px;font-weight:700;line-height:1;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
-body.spg-admin.spg-edit-mode .bk-cam{display:flex}
+.bk-kebab-menu{
+  position:absolute;right:0;top:42px;min-width:150px;
+  background:#fff;color:#1a1a2e;border-radius:12px;overflow:hidden;
+  box-shadow:0 14px 30px -10px rgba(0,0,0,.45);
+  display:none;flex-direction:column;
+}
+[data-theme="dark"] .bk-kebab-menu{ background:#2a2438;color:#eee; }
+.bk-kebab-menu.open{ display:flex; }
+.bk-kebab-menu button{
+  display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;
+  padding:11px 14px;font-size:14.5px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;
+}
+.bk-kebab-menu button + button{ border-top:1px solid rgba(0,0,0,.08); }
+[data-theme="dark"] .bk-kebab-menu button + button{ border-top-color:rgba(255,255,255,.1); }
+.bk-kebab-menu .bk-kebab-danger{ color:#d32f2f; }
 
 /* Vidha ko talo ma शीर्षक — lamo bhaye pani sabai ko akshar ustai (sano nahune),
    lamo title 2 line samma wrap huncha (teesro line bhaye ... dekhincha) */
@@ -199,15 +218,6 @@ body.spg-admin.spg-edit-mode .bk-cam{display:flex}
 }
 #poemModal.ae-design-vintage .poem-cover-large{filter:sepia(.35) contrast(1.05)}
 
-/* Extra post (admin le थपेको नयाँ रचना) ko delete button */
-.bk-del{
-  position:absolute;left:8px;top:8px;z-index:3;
-  width:40px;height:40px;border-radius:50%;border:0;
-  background:rgba(180,30,30,.75);color:#fff;font-size:17px;line-height:1;
-  display:none;align-items:center;justify-content:center;cursor:pointer;
-}
-body.spg-admin.spg-edit-mode .bk-del{display:flex}
-
 /* =========================================================
    ⋮ मेनु: स्टाइलिश लुक (blur, shadow, animation) + auto-close
    ========================================================= */
@@ -253,3 +263,11 @@ body.spg-admin.spg-edit-mode .bk-del{display:flex}
 #poemModal .modal-actions [onclick="window.print()"]{ display:none !important; }
 .pm-admin-only{ display:none; }
 body.spg-admin .pm-admin-only{ display:flex !important; }
+body.spg-view-as .pm-admin-only{ display:none !important; }
+
+/* =========================================================
+   "View as" (अरुले देख्ने गरी हेर्नुस्) चालू हुँदा admin UI लुकाउने
+   ========================================================= */
+body.spg-view-as #spMenuSettings,
+body.spg-view-as #spMenuEditMode,
+body.spg-view-as #spMenuAddPost{ display:none !important; }
