@@ -2,7 +2,7 @@
 // समीर साहित्य संग्रह — Service Worker (PWA)
 // ================================================
 
-const CACHE_NAME = 'samir-sahitya-v28';
+const CACHE_NAME = 'samir-sahitya-v30';
 const CACHE_URLS = [
   './',
   './index.html',
