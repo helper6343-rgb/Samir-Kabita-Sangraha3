@@ -140,9 +140,22 @@
     return wrap;
   }
 
+  /* ":scope > .class" केही पुराना Android WebView मा काम गर्दैन (चुपचाप
+     error दिएर पूरै function रोकिदिन्छ) — त्यसको सट्टा सबै ब्राउजरमा
+     काम गर्ने तरिकाले direct child खोज्ने/छान्ने */
+  function directChild(el, cls) {
+    for (var i = 0; i < el.children.length; i++) if (el.children[i].classList.contains(cls)) return el.children[i];
+    return null;
+  }
+  function directChildren(el, cls) {
+    var out = [];
+    for (var i = 0; i < el.children.length; i++) if (el.children[i].classList.contains(cls)) out.push(el.children[i]);
+    return out;
+  }
+
   /* ---------- book banaune ---------- */
   function bookify(card) {
-    if (card.querySelector(':scope > .bk-book')) return;
+    if (directChild(card, 'bk-book')) return;
     if (!card.dataset.title) card.dataset.title = cardTitle(card);
     if (card.dataset.label === undefined) card.dataset.label = catText(card);
     if (!card.dataset.orig) card.dataset.orig = coverSrc(card);
@@ -229,7 +242,7 @@
   }
 
   function rebuild(card) {
-    var w = card.querySelector(':scope > .bk-book');
+    var w = directChild(card, 'bk-book');
     if (w) w.remove();
     card.style.removeProperty('display');
     bookify(card);
@@ -243,7 +256,7 @@
     /* साइटको आफ्नै कोडले #allCards फेरि बनायो भने (जस्तै filter/search),
        हाम्रा थप रचनाहरू हराउन सक्छन् — सङ्ख्या नमिले फेरि देखाइदिने */
     if (EXTRA.length) {
-      var have = grid.querySelectorAll(':scope > .bk-extra-item').length;
+      var have = directChildren(grid, 'bk-extra-item').length;
       if (have !== EXTRA.length) renderExtra();
     }
   }
@@ -498,7 +511,7 @@
       tries++;
       if (tries > 6) {
         im.remove();
-        if (!box.querySelector(':scope > .bk-fallback')) {
+        if (!directChild(box, 'bk-fallback')) {
           box.classList.add('bk-noimg');
           var ph = document.createElement('div'); ph.className = 'bk-fallback'; ph.textContent = '📖';
           box.insertBefore(ph, insertBefore || null);
@@ -595,7 +608,7 @@
   function renderExtra() {
     var grid = document.getElementById('allCards');
     if (!grid) return;
-    grid.querySelectorAll(':scope > .bk-extra-item').forEach(function (e) { e.remove(); });
+    directChildren(grid, 'bk-extra-item').forEach(function (e) { e.remove(); });
     for (var i = EXTRA.length - 1; i >= 0; i--) {
       grid.insertBefore(makeExtraCard(EXTRA[i]), grid.firstChild);
     }
