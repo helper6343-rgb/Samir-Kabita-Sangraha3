@@ -440,11 +440,49 @@
 
 
   /* ---------- थप रचनाहरू (admin ले एप बाटै थपेका नयाँ लेख/कविता) ---------- */
+  var PENDING_KEY = 'spg_pending_extra';
+  /* GitHub मा सेभ सफल भइसकेपछि पनि, GitHub Pages ले नयाँ फाइल सबैतिर
+     देखाउन केही मिनेट लिन सक्छ (CDN propagation)। त्यो बेलामा फेरि app
+     खोल्दा/fetch गर्दा रचना "हरायो" जस्तो देखिने समस्या आउँथ्यो। अब
+     प्रकाशित भएको (confirmed सफल) रचना यहीँ फोनमा (localStorage) पनि
+     राखेर, असली फाइलले भेट्टाउन्जेल देखाइरहने — हराउँदैन। */
+  function getPending() {
+    try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function setPending(list) {
+    try { localStorage.setItem(PENDING_KEY, JSON.stringify(list)); } catch (e) {}
+  }
+  function pendingAdd(entry) {
+    var list = getPending().filter(function (x) { return x.id !== entry.id; });
+    list.unshift(entry);
+    setPending(list);
+  }
+  function pendingRemove(id) {
+    setPending(getPending().filter(function (x) { return x.id !== id; }));
+  }
   function loadExtra() {
     return fetch(EXTRA_URL + '?t=' + Date.now(), { cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : []; })
       .catch(function () { return []; })
-      .then(function (j) { EXTRA = Array.isArray(j) ? j : []; });
+      .then(function (j) {
+        var net = Array.isArray(j) ? j : [];
+        var pending = getPending();
+        if (pending.length) {
+          var netIds = {};
+          net.forEach(function (x) { netIds[x.id] = true; });
+          var stillPending = [];
+          var extra = [];
+          pending.forEach(function (p) {
+            if (netIds[p.id]) return;           // असली फाइलमा आइसक्यो — pending बाट हटाउने
+            stillPending.push(p);
+            extra.push(p);                        // अझै देखाइरहने
+          });
+          setPending(stillPending);
+          EXTRA = extra.concat(net);
+        } else {
+          EXTRA = net;
+        }
+      });
   }
 
   function makeExtraCard(entry) {
@@ -553,6 +591,7 @@
       }
       if (!ok) throw new Error('मेटिएन, फेरि प्रयास गर्नुस्।');
       EXTRA = EXTRA.filter(function (x) { return x.id !== id; });
+      pendingRemove(id);
       renderExtra();
       toast('रचना मेटियो ✓');
     } catch (e) { toast((e && e.message) || 'मेटिएन', 4000); }
@@ -560,14 +599,17 @@
   window.SPG_EXTRA = {
     reload: function () { return loadExtra().then(renderExtra); },
     list: function () { return EXTRA; },
-    /* नयाँ रचना सेभ भएपछि, GitHub Pages ले साइट अपडेट गर्न केही समय लिन सक्छ।
-       त्यसैले फेरि fetch नगरी, थप्यै-थपि (optimistic) यहीँ देखाइदिने — फ्ल्यास भएर हराउँदैन */
-    addLocal: function (entry) { EXTRA.unshift(entry); renderExtra(); },
+    /* नयाँ रचना सेभ भएपछि, GitHub Pages ले साइट अपडेट गर्न (सबैतिर देखाउन) केही
+       मिनेट लिन सक्छ। त्यसैले फेरि fetch नगरी, थप्यै-थपि (optimistic) यहीँ
+       देखाइदिने, र फोनमै (localStorage) पनि राख्ने — app बन्द गरे/पुनः खोले
+       पनि असली फाइलले भेट्टाउन्जेल हराउँदैन */
+    addLocal: function (entry) { EXTRA.unshift(entry); pendingAdd(entry); renderExtra(); },
     /* सम्पादन सेभ भएपछि, सोही entry local array मा पनि अपडेट गर्ने */
     updateLocal: function (entry) {
       var idx = -1;
       for (var i = 0; i < EXTRA.length; i++) { if (EXTRA[i].id === entry.id) { idx = i; break; } }
       if (idx !== -1) EXTRA[idx] = entry; else EXTRA.unshift(entry);
+      pendingAdd(entry);
       renderExtra();
       var body = document.getElementById('modalBody');
       if (body && body.dataset.extraId === entry.id) openExtraPost(entry);
@@ -939,6 +981,72 @@
       pushed = false;
     });
   }
+
+  /* ---------- समीर AI मोडल: back/साइड-स्वाइपले एप बन्द नगरोस् ----------
+     js/sameerai.js ले खोल्दा history.pushState कहिल्यै गर्दैन (असली बग),
+     त्यसैले back/edge-swipe थिच्दा app बाटै बाहिरिन्छ। openSameerAI/
+     closeSameerAI लाई यहीँबाट wrap गरेर history-सँग जोड्ने — असली फाइल
+     कहिल्यै छोइँदैन । */
+  (function guardSameerAIHistory() {
+    var tries = 0;
+    var t = setInterval(function () {
+      tries++;
+      if (typeof window.openSameerAI === 'function' && typeof window.closeSameerAI === 'function' && !window.openSameerAI.__spgWrapped) {
+        var origOpen = window.openSameerAI, origClose = window.closeSameerAI;
+        window.openSameerAI = function () {
+          origOpen.apply(this, arguments);
+          history.pushState({ spgAI: true }, '');
+        };
+        window.closeSameerAI = function () {
+          if (history.state && history.state.spgAI) history.back();
+          else origClose.apply(this, arguments);
+        };
+        window.openSameerAI.__spgWrapped = true;
+        clearInterval(t);
+      } else if (tries > 50) clearInterval(t);
+    }, 100);
+  })();
+
+  /* ---------- समीर AI: जवाफ नभेटे "Google मा खोज्नुस्" लिंक थप्ने ----------
+     साइट backend-रहित भएकोले सिधै AI ले live Google जवाफ ल्याउन सक्दैन;
+     बायोमा नभएको प्रश्नमा एक-थिचाइको Google-खोज लिंक दिने — प्रयोगकर्ताले
+     उत्तर नपाई नरोकियोस् भनेर । */
+  (function enhanceSameerAIFallback() {
+    var FALLBACK = 'यो प्रश्नको जवाफ मसँग छैन। तपाईं समीरको पढाइ, घर, हालको ठेगाना, रुचि, पुस्तक वा शौकबारे सोध्न सक्नुहुन्छ।';
+    var lastQuestion = '';
+    var tries = 0;
+    var t = setInterval(function () {
+      tries++;
+      var input = document.getElementById('sameerAIInput');
+      if (typeof window.sendSameerAIMessage === 'function' && input && !window.sendSameerAIMessage.__spgWrapped) {
+        var orig = window.sendSameerAIMessage;
+        window.sendSameerAIMessage = function () {
+          lastQuestion = (input.value || '').trim();
+          orig.apply(this, arguments);
+          setTimeout(checkFallback, 420);
+        };
+        window.sendSameerAIMessage.__spgWrapped = true;
+        clearInterval(t);
+      } else if (tries > 50) clearInterval(t);
+    }, 100);
+    function checkFallback() {
+      if (!lastQuestion) return;
+      var box = document.getElementById('sameerAIMessages');
+      if (!box) return;
+      var msgs = box.querySelectorAll('.sameerai-msg.bot');
+      var last = msgs[msgs.length - 1];
+      if (!last || last.dataset.spgGoogled || last.textContent.trim() !== FALLBACK) return;
+      last.dataset.spgGoogled = '1';
+      var a = document.createElement('a');
+      a.href = 'https://www.google.com/search?q=' + encodeURIComponent(lastQuestion);
+      a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = '🔍 "' + lastQuestion + '" Google मा खोज्नुस्';
+      a.style.cssText = 'display:inline-block;margin-top:8px;color:#1a73e8;text-decoration:underline;font-size:13.5px;';
+      last.appendChild(document.createElement('br'));
+      last.appendChild(a);
+      box.scrollTop = box.scrollHeight;
+    }
+  })();
 
   /* ---------- सुरु ---------- */
   function loadMap() {
