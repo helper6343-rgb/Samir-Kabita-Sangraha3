@@ -485,6 +485,35 @@
       });
   }
 
+  /* GitHub मा फोटो अपलोड सफल भएपछि पनि, GitHub Pages ले त्यो फोटो सबैतिर
+     देखाउन (असली JSON भन्दा बढी समय) केही सेकेन्ड-मिनेट लिन सक्छ। त्यो
+     बेलामा फोटो "बिग्रिएको/खाली" जस्तो देखिने समस्या आउँथ्यो। अब फोटो
+     लोड नभए केही सेकेन्डको फरकमा आफैं फेरि-फेरि प्रयास गर्ने (cache-bust
+     गरेर), धेरै पटक असफल भएमा मात्र 📖 खाली चिन्ह देखाउने। */
+  function loadCoverWithRetry(box, src, alt, insertBefore) {
+    var im = document.createElement('img');
+    im.className = 'bk-full'; im.alt = alt || '';
+    var tries = 0;
+    im.onerror = function () {
+      tries++;
+      if (tries > 6) {
+        im.remove();
+        if (!box.querySelector(':scope > .bk-fallback')) {
+          box.classList.add('bk-noimg');
+          var ph = document.createElement('div'); ph.className = 'bk-fallback'; ph.textContent = '📖';
+          box.insertBefore(ph, insertBefore || null);
+        }
+        return;
+      }
+      setTimeout(function () {
+        im.src = src + (src.indexOf('?') === -1 ? '?' : '&') + '_r=' + Date.now();
+      }, Math.min(2500 * tries, 9000));
+    };
+    im.src = src;
+    box.insertBefore(im, insertBefore || null);
+    return im;
+  }
+
   function makeExtraCard(entry) {
     var wrap = document.createElement('div');
     wrap.className = 'bk-book';
@@ -492,9 +521,7 @@
     var box = document.createElement('div');
     box.className = 'bk-cover-box';
     if (entry.cover) {
-      var im = document.createElement('img');
-      im.className = 'bk-full'; im.src = entry.cover; im.alt = entry.title || '';
-      box.appendChild(im);
+      loadCoverWithRetry(box, entry.cover, entry.title || '', null);
     } else {
       box.classList.add('bk-noimg');
       var ph = document.createElement('div'); ph.className = 'bk-fallback'; ph.textContent = '📖';
