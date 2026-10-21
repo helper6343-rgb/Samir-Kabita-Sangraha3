@@ -242,6 +242,14 @@
   }
 
   function rebuild(card) {
+    /* "थप रचना" (extra post) कार्डलाई native rebuild ले कहिल्यै नछाओस् —
+       नत्र यसको भित्री फोटो/पाठ (bk-book) हटाएर bookify() ले फेरि
+       बनाउन खोज्दा (native-मात्र का लागि बनेको भएकोले) खाली छोडिदिन्थ्यो,
+       अनि बाहिरको card खोल्टो (.bk-extra-item) भने रहिरहने भएकोले
+       system ले "ठीकै छ" भनेर फेरि बनाउँदैनथ्यो — रचना खाली देखिन्थ्यो।
+       (data/book-covers.json, data/deleted.json, data/extra-posts.json
+       तीनवटै फरक-फरक समयमा लोड हुने भएकोले यो कहिले हुने कहिले नहुने थियो।) */
+    if (card.classList.contains('bk-extra-item')) return;
     var w = directChild(card, 'bk-book');
     if (w) w.remove();
     card.style.removeProperty('display');
@@ -256,8 +264,11 @@
     /* साइटको आफ्नै कोडले #allCards फेरि बनायो भने (जस्तै filter/search),
        हाम्रा थप रचनाहरू हराउन सक्छन् — सङ्ख्या नमिले फेरि देखाइदिने */
     if (EXTRA.length) {
-      var have = directChildren(grid, 'bk-extra-item').length;
-      if (have !== EXTRA.length) renderExtra();
+      var items = directChildren(grid, 'bk-extra-item');
+      /* सङ्ख्या त मिले पनि, कुनै कार्ड भित्र content नै नभई खाली भेटिए
+         (माथिको जस्तै कुनै अर्को ठाउँबाट बिग्रिए) पनि फेरि बनाइदिने */
+      var broken = items.some(function (it) { return !directChild(it, 'bk-book'); });
+      if (items.length !== EXTRA.length || broken) renderExtra();
     }
   }
 
