@@ -12,6 +12,7 @@
   var SUPABASE_KEY = 'sb_publishable_LiFNXwxSxX36bNDArM-JQw_spLDoBfY';
   var TABLE = 'messages';
   var PROFILE_TABLE = 'profiles';
+  var PUSH_TABLE = 'push_subscriptions';
   var THREAD_KEY = 'spg_chat_thread';
   var NAME_KEY = 'spg_chat_name';
   var PHOTO_KEY = 'spg_chat_photo';
@@ -19,6 +20,11 @@
   var POLL_MS = 4000;
   var MAX_RECORD_MS = 60000;
   var PHOTO_SIZE = 160;
+  /* Push notification (app बन्द भए पनि आउने) को लागि सार्वजनिक VAPID
+     key — यो गोप्य होइन, browser लाई दिइने मात्र हो (publishable key
+     जस्तै)। असली गोप्य key (private) त Supabase Edge Function भित्र
+     secret मा मात्र राखिएको छ, यता कहीं छैन। */
+  var VAPID_PUBLIC_KEY = 'BOGadMjOGkvOHxbj9obZ9JjWH89mivCPlgT0XhL2XBSDojbTbZ2FZwppS4DXmcJlmCfeiS08_5XP2PSsIRvm2ns';
 
   function admin() { return window.SPG_ADMIN; }
   function isAdmin() { var a = admin(); return !!(a && a.isLoggedIn()); }
@@ -71,6 +77,55 @@
   async function sbDelete(table, id) {
     var r = await fetch(sbUrl(table, '?id=eq.' + id), { method: 'DELETE', headers: sbHeaders() });
     if (!r.ok) throw new Error('मेटाउन सकिएन (' + r.status + ')');
+  }
+  /* अर्को पक्ष (visitor/admin) ले पठाएका, अझै "seen" नभएका सन्देशलाई
+     "देखियो" भनेर चिन्ह लगाउने — fromSender = जसले पठाएको हो */
+  function markSeen(threadId, fromSender) {
+    fetch(sbUrl(TABLE, '?thread_id=eq.' + encodeURIComponent(threadId) + '&sender=eq.' + fromSender + '&seen=eq.false'), {
+      method: 'PATCH', headers: sbHeaders(), body: JSON.stringify({ seen: true })
+    }).catch(function () {});
+  }
+
+  /* ---------- Push Notification: app बन्द भए पनि सन्देश आयो भनेर जानकारी ---------- */
+  function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var raw = atob(base64);
+    var out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+  function pushSupported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
+  }
+  /* role: 'visitor' (thread_id-कै आधारमा) वा 'admin' (सबै thread का
+     सन्देश पाउने) — दुवैलाई फरक-फरक गरी subscribe गर्न मिल्छ */
+  async function enablePush(role, btn) {
+    if (!pushSupported()) { toast('यो ब्राउजर/डिभाइसमा Notification मिल्दैन'); return; }
+    try {
+      var perm = await Notification.requestPermission();
+      if (perm !== 'granted') { toast('Notification को अनुमति दिइएन'); return; }
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
+      var j = sub.toJSON();
+      var r = await fetch(sbUrl(PUSH_TABLE, '?on_conflict=endpoint'), {
+        method: 'POST',
+        headers: sbHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+        body: JSON.stringify([{ thread_id: role === 'admin' ? 'admin' : myThreadId(), role: role, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }])
+      });
+      if (!r.ok) throw new Error('सेभ भएन (' + r.status + ')');
+      if (btn) { btn.textContent = '🔔 Notification सक्रिय ✓'; btn.disabled = true; }
+      toast('Notification सक्रिय भयो ✓ अब app बन्द भए पनि सन्देश आउँदा थाहा हुन्छ', 4000);
+    } catch (e) { toast((e && e.message) || 'Notification सक्रिय गर्न सकिएन', 4000); }
+  }
+  async function pushAlreadyEnabled() {
+    try {
+      if (!pushSupported() || Notification.permission !== 'granted') return false;
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+      return !!sub;
+    } catch (e) { return false; }
   }
 
   /* ---------- प्रोफाइल फोटो: सानो वर्गाकार JPEG बनाउने ---------- */
@@ -131,7 +186,10 @@
     '.chat-profile-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}' +
     '.chat-profile-row img{width:50px;height:50px;border-radius:50%;object-fit:cover;background:rgba(0,0,0,.1);cursor:pointer}' +
     '.chat-profile-row input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid #cfc7bd;font-size:14.5px;font-family:inherit}' +
-    '.chat-rec-timer{font-size:12.5px;opacity:.75;margin-left:4px;align-self:center}';
+    '.chat-rec-timer{font-size:12.5px;opacity:.75;margin-left:4px;align-self:center}' +
+    '.chat-notif-btn{display:block;margin:2px 0 10px;padding:8px 14px;border-radius:999px;border:1px solid rgba(232,196,122,.5);background:none;color:inherit;font-size:12.5px;cursor:pointer}' +
+    '.chat-notif-btn:disabled{opacity:.6;cursor:default}' +
+    '.chat-seen{opacity:.8}';
   document.head.appendChild(st);
 
   function timeLabel(iso) {
@@ -197,7 +255,8 @@
       }
       var tm = document.createElement('span');
       tm.className = 'chat-time';
-      tm.textContent = (mine ? '' : esc(m.name || '') + ' • ') + timeLabel(m.created_at);
+      var seenTxt = mine ? (' ' + (m.seen ? '✓✓ देखियो' : '✓ पठाइयो')) : '';
+      tm.textContent = (mine ? '' : esc(m.name || '') + ' • ') + timeLabel(m.created_at) + seenTxt;
       bubble.appendChild(tm);
 
       var wrap = document.createElement('div');
@@ -287,6 +346,7 @@
     '<button class="sp-x" aria-label="बन्द">✕</button>' +
     '<h2>💬 Chat</h2>' +
     '<div class="sp-sub">तपाईंको सन्देश सिधै समीरलाई पुग्छ</div>' +
+    '<button id="cvNotifBtn" class="chat-notif-btn" type="button">🔔 Notification सक्रिय गर्नुस्</button>' +
     '<div class="chat-profile-row"><img id="cvAvatar" src=""><input id="cvNameInput" type="text" placeholder="तपाईंको नाम (वैकल्पिक)"></div>' +
     '<input type="file" id="cvPhotoFile" accept="image/*" hidden>' +
     '<div class="chat-box" id="cvBox"></div>' +
@@ -302,8 +362,14 @@
     visitOv.querySelector('#cvNameInput').value = myName();
     refreshVisitor();
     clearInterval(vPoll); vPoll = setInterval(refreshVisitor, POLL_MS);
+    var nb = visitOv.querySelector('#cvNotifBtn');
+    pushAlreadyEnabled().then(function (on) {
+      if (on) { nb.textContent = '🔔 Notification सक्रिय ✓'; nb.disabled = true; }
+      else { nb.textContent = '🔔 Notification सक्रिय गर्नुस्'; nb.disabled = false; }
+    });
   }
   function closeVisitor() { visitOv.classList.remove('sp-open'); clearInterval(vPoll); }
+  visitOv.querySelector('#cvNotifBtn').addEventListener('click', function () { enablePush('visitor', this); });
   visitOv.querySelector('#cvNameInput').addEventListener('change', function () {
     setMyName(this.value.trim());
     saveMyProfile();
@@ -328,6 +394,7 @@
     try {
       var rows = await sbSelect(TABLE, '?thread_id=eq.' + encodeURIComponent(myThreadId()) + '&select=*&order=created_at.asc');
       renderMessages(visitOv.querySelector('#cvBox'), rows, 'visitor', { photo: myPhoto() }, visitorEditMsg, visitorDeleteMsg, '');
+      markSeen(myThreadId(), 'admin');   // समीरले पठाएका सन्देश अहिले देखियो भनेर चिन्ह लगाउने
     } catch (e) {}
   }
   function visitorEditMsg(m) {
@@ -381,6 +448,7 @@
     '<button class="sp-x" aria-label="बन्द">✕</button>' +
     '<h2>📥 सन्देशहरू</h2>' +
     '<div class="sp-sub">पाठकहरूको कुराकानी</div>' +
+    '<button id="caNotifBtn" class="chat-notif-btn" type="button">🔔 Notification सक्रिय गर्नुस्</button>' +
     '<div class="chat-profile-row" style="justify-content:flex-end"><input id="caNickname" type="text" placeholder="तपाईंको nickname" style="max-width:160px"></div>' +
     '<div id="caList"></div>' +
     '</div>';
@@ -399,8 +467,14 @@
     inboxOv.querySelector('#caNickname').value = adminName();
     refreshInbox();
     clearInterval(iPoll); iPoll = setInterval(refreshInbox, POLL_MS);
+    var nb = inboxOv.querySelector('#caNotifBtn');
+    pushAlreadyEnabled().then(function (on) {
+      if (on) { nb.textContent = '🔔 Notification सक्रिय ✓'; nb.disabled = true; }
+      else { nb.textContent = '🔔 Notification सक्रिय गर्नुस्'; nb.disabled = false; }
+    });
   }
   function closeInbox() { inboxOv.classList.remove('sp-open'); clearInterval(iPoll); }
+  inboxOv.querySelector('#caNotifBtn').addEventListener('click', function () { enablePush('admin', this); });
   var threadProfiles = {};
   async function refreshInbox() {
     var list = inboxOv.querySelector('#caList');
@@ -452,18 +526,34 @@
   threadOv.querySelector('#caBack').addEventListener('click', closeThreadOv);
   var curThreadId = null, curThreadPhoto = '', tPoll = null;
   function openThread(id, name, photo) {
+    /* सूची (inbox) र thread दुवै एकैसाथ "खुला" नरहोस् भनेर, thread
+       खोल्दा सूची लुकाइदिने — नत्र एक पटक back थिच्दा दुवै एकैचोटि
+       बन्द हुन्थ्यो */
+    closeInbox();
     curThreadId = id; curThreadPhoto = photo || '';
     threadOv.querySelector('#caThreadTitle').textContent = name || 'पाठक';
     threadOv.classList.add('sp-open');
     refreshThread();
     clearInterval(tPoll); tPoll = setInterval(refreshThread, POLL_MS);
   }
-  function closeThreadOv() { threadOv.classList.remove('sp-open'); clearInterval(tPoll); curThreadId = null; }
+  function closeThreadOv() { threadOv.classList.remove('sp-open'); }
+  /* Thread जे तरिकाले बन्द भए पनि (✕, भित्री ← बटन, वा हार्डवेयर
+     back/edge-swipe — जुन सबैतिरबाट सिधै class हटाइन्छ, यो function
+     बाटै नभई), यहीँबाट पत्ता लगाएर सफा गर्ने अनि फेरि सूची (inbox)
+     देखाइदिने — ताकि back ले एकपटकमा एक-एक तह मात्र पछाडि जाओस्
+     (thread → सूची → home), एकैचोटि सबै बन्द नहोस् */
+  new MutationObserver(function () {
+    if (threadOv.classList.contains('sp-open') || !curThreadId) return;
+    clearInterval(tPoll);
+    curThreadId = null;
+    if (isAdmin()) openInbox();
+  }).observe(threadOv, { attributes: true, attributeFilter: ['class'] });
   async function refreshThread() {
     if (!curThreadId) return;
     try {
       var rows = await sbSelect(TABLE, '?thread_id=eq.' + encodeURIComponent(curThreadId) + '&select=*&order=created_at.asc');
       renderMessages(threadOv.querySelector('#caBox'), rows, 'admin', { photo: '' }, adminEditMsg, adminDeleteMsg, curThreadPhoto);
+      markSeen(curThreadId, 'visitor');   // पाठकले पठाएका सन्देश अहिले देखियो भनेर चिन्ह लगाउने
     } catch (e) {}
   }
   function adminEditMsg(m) {

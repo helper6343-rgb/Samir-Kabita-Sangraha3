@@ -117,9 +117,16 @@
     menu.className = 'bk-kebab-menu';
     var editBtn = document.createElement('button');
     editBtn.type = 'button'; editBtn.innerHTML = '✏️ <span>सम्पादन</span>';
+    menu.appendChild(editBtn);
+    var coverBtn = null;
+    if (opts.onChangeCover) {
+      coverBtn = document.createElement('button');
+      coverBtn.type = 'button'; coverBtn.innerHTML = '🖼️ <span>फोटो बदल्नुस्</span>';
+      menu.appendChild(coverBtn);
+    }
     var delBtn = document.createElement('button');
     delBtn.type = 'button'; delBtn.className = 'bk-kebab-danger'; delBtn.innerHTML = '🗑️ <span>मेटाउनुस्</span>';
-    menu.appendChild(editBtn); menu.appendChild(delBtn);
+    menu.appendChild(delBtn);
     btn.addEventListener('click', function (e) {
       e.stopPropagation(); e.preventDefault();
       var wasOpen = menu.classList.contains('open');
@@ -131,6 +138,13 @@
       closeAllKebabs();
       opts.onEdit && opts.onEdit();
     });
+    if (coverBtn) {
+      coverBtn.addEventListener('click', function (e) {
+        e.stopPropagation(); e.preventDefault();
+        closeAllKebabs();
+        opts.onChangeCover();
+      });
+    }
     delBtn.addEventListener('click', function (e) {
       e.stopPropagation(); e.preventDefault();
       closeAllKebabs();
@@ -219,6 +233,7 @@
 
     var kebab = makeKebab({
       onEdit: function () { editNativeFromCard(card); },
+      onChangeCover: function () { changeCover(card); },
       onDelete: function () { confirmDeleteNative(title); }
     });
     kebab.classList.add('bk-admin-only');
@@ -584,6 +599,14 @@
     var body = document.getElementById('modalBody');
     var modal = document.getElementById('poemModal');
     if (!body || !modal) return;
+    /* Native कविता app.js को openPoem() मार्फत खुल्दा history.pushState
+       हुन्छ (openOverlay('poem')), त्यसैले back/edge-swipe थिच्दा त्यही
+       history ले मोडल मात्र बन्द गर्छ। थप रचना यहीँबाट सिधै मोडल खोल्ने
+       भएकोले त्यो pushState कहिल्यै हुँदैनथ्यो — अनि back थिच्दा history
+       मा केही नभएकोले सिधै पूरै app बन्द हुन्थ्यो। अब native-कै
+       openOverlay() लाई यहीँबाट पनि बोलाएर सोही history-मा जोड्ने —
+       app.js को कुनै फाइल नछोइकनै । */
+    var alreadyOpen = modal.classList.contains('open');
     var html = '';
     if (entry.cover) html += '<div class="poem-cover-large"><img src="' + esc(entry.cover) + '" alt="' + esc(entry.title || '') + '"></div>';
     html += '<h1 class="poem-title-large">' + esc(entry.title || '') + '</h1>';
@@ -593,6 +616,8 @@
       सम्पादन थिच्दा extra-post-कै editor (admin-newpost.js) खुलोस् भनेर */
     modal.classList.add('open');
     document.body.classList.add('modal-open');
+    document.body.style.overflow = 'hidden';
+    if (!alreadyOpen && typeof window.openOverlay === 'function') window.openOverlay('poem');
     if (window.SPG_fitPoem) setTimeout(window.SPG_fitPoem, 60);
   }
   window.SPG_openExtraPost = openExtraPost;
