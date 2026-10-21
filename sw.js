@@ -2,7 +2,7 @@
 // समीर साहित्य संग्रह — Service Worker (PWA)
 // ================================================
 
-const CACHE_NAME = 'samir-sahitya-v36';
+const CACHE_NAME = 'samir-sahitya-v38';
 const CACHE_URLS = [
   './',
   './index.html',
@@ -117,6 +117,34 @@ self.addEventListener('fetch', event => {
       }).catch(() => {
         if (req.destination === 'document') return caches.match('./index.html');
       });
+    })
+  );
+});
+
+// ── Push Notification: app बन्द भए पनि नयाँ सन्देश आयो भनेर देखाउने ──
+self.addEventListener('push', event => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) {}
+  const title = data.title || 'समीर साहित्य संग्रह';
+  const body = data.body || 'नयाँ सन्देश आयो';
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: './icons/icon-192x192.png',
+      badge: './icons/icon-192x192.png',
+      data: { threadId: data.threadId || null },
+      vibrate: [120, 60, 120]
+    })
+  );
+});
+
+// Notification थिच्दा app खोल्ने/माथि ल्याउने
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) { if ('focus' in c) return c.focus(); }
+      if (clients.openWindow) return clients.openWindow('./index.html');
     })
   );
 });
