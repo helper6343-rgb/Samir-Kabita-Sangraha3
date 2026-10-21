@@ -105,9 +105,17 @@
     '.chat-row.me .chat-msg{background:#1a2547;color:#fff;border-bottom-right-radius:4px}' +
     '.chat-msg .chat-time{display:block;margin-top:4px;font-size:10.5px;opacity:.65}' +
     '.chat-msg audio{max-width:220px;height:34px}' +
-    '.chat-msg-actions{display:flex;gap:10px;margin:2px 8px 0;font-size:12px;opacity:.75}' +
-    '.chat-row.me .chat-msg-actions{justify-content:flex-end}' +
-    '.chat-msg-actions span{cursor:pointer;text-decoration:underline}' +
+    '.chat-bubble-wrap{display:flex;align-items:flex-end;gap:0}' +
+    '.chat-kebab-wrap{position:relative;flex:0 0 auto}' +
+    '.chat-kebab{border:0;background:none;font-size:17px;line-height:1;padding:6px 4px;cursor:pointer;opacity:.5;color:inherit}' +
+    '.chat-kebab-menu{position:absolute;top:0;background:#fff;color:#222;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.2);min-width:150px;padding:6px;display:none;z-index:20}' +
+    '[data-theme="dark"] .chat-kebab-menu{background:#2b2b2b;color:#eee}' +
+    '.chat-row.me .chat-kebab-menu{right:0}' +
+    '.chat-row.other .chat-kebab-menu{left:0}' +
+    '.chat-kebab-menu.open{display:block}' +
+    '.chat-kebab-menu button{display:block;width:100%;text-align:left;padding:10px 11px;border:0;background:none;border-radius:8px;font-size:13.5px;cursor:pointer;color:inherit;font-family:inherit}' +
+    '.chat-kebab-menu button:active{background:rgba(0,0,0,.08)}' +
+    '.chat-kebab-menu button.chat-kebab-danger{color:#d32f2f}' +
     '.chat-empty{text-align:center;padding:24px 10px;opacity:.6;font-size:13.5px}' +
     '.chat-input-row{display:flex;gap:8px;margin-top:4px;align-items:flex-end}' +
     '.chat-input-row textarea{flex:1;min-height:44px;max-height:120px;padding:11px 13px;border-radius:14px;border:1px solid #cfc7bd;font-size:15px;font-family:inherit;resize:none}' +
@@ -134,6 +142,35 @@
     return 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23bbb"/><circle cx="20" cy="15" r="7" fill="%23fff"/><ellipse cx="20" cy="33" rx="13" ry="9" fill="%23fff"/></svg>');
   }
 
+  /* थप्ने ⋮ मेनु (सन्देशकै छेउमा) बन्द गर्ने */
+  function closeAllChatKebabs() {
+    document.querySelectorAll('.chat-kebab-menu.open').forEach(function (m) { m.classList.remove('open'); });
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.chat-kebab-wrap')) closeAllChatKebabs();
+  }, true);
+
+  /* Chrome/Android ले बनाउने audio/webm भ्वाइस म्यासेजमा "duration" (लम्बाइ)
+     सही थाहा नपाएर जम्मा २-३ सेकेन्डमै सुन्न रोकिने (वास्तविक रेकर्डिङ लामै
+     भए पनि) एउटा चिनिएको bug हो। Metadata लोड भएपछि एकपटक टुप्पोसम्म
+     "seek" गरेर (चुपचाप, सुन्न नपर्ने गरी) ब्राउजरलाई पूरा लम्बाइ पत्ता
+     लगाउन बाध्य पारेर, पूरै (१ मिनेटसम्म) सुन्न मिल्ने बनाउने। */
+  function fixAudioDuration(audio) {
+    function onMeta() {
+      audio.removeEventListener('loadedmetadata', onMeta);
+      if (audio.duration === Infinity || isNaN(audio.duration)) {
+        audio.currentTime = 1e101;
+        var onTU = function () {
+          audio.removeEventListener('timeupdate', onTU);
+          audio.currentTime = 0;
+        };
+        audio.addEventListener('timeupdate', onTU);
+      }
+    }
+    audio.addEventListener('loadedmetadata', onMeta);
+    audio.preload = 'metadata';
+  }
+
   /* ---------- एउटा thread का म्यासेज देखाउने (दुवै (पाठक/admin) view मा प्रयोग हुन्छ) ---------- */
   function renderMessages(box, rows, myRole, myId, onEdit, onDelete, otherAvatar) {
     if (!rows.length) { box.innerHTML = ''; var e = document.createElement('div'); e.className = 'chat-empty'; e.textContent = 'अहिलेसम्म कुनै सन्देश छैन। तल लेखेर पठाउनुस्।'; box.appendChild(e); return; }
@@ -150,6 +187,7 @@
       if (m.audio) {
         var au = document.createElement('audio');
         au.controls = true; au.src = m.audio;
+        fixAudioDuration(au);
         bubble.appendChild(au);
       }
       if (m.text) {
@@ -161,25 +199,44 @@
       tm.className = 'chat-time';
       tm.textContent = (mine ? '' : esc(m.name || '') + ' • ') + timeLabel(m.created_at);
       bubble.appendChild(tm);
-      row.appendChild(av); row.appendChild(bubble);
-      box.appendChild(row);
-      if (mine && !m.audio) {
-        var act = document.createElement('div');
-        act.className = 'chat-msg-actions';
-        var ed = document.createElement('span'); ed.textContent = '✏️ सच्याउनुस्';
-        ed.addEventListener('click', function () { onEdit && onEdit(m); });
-        var del = document.createElement('span'); del.textContent = '🗑️ मेटाउनुस्';
-        del.addEventListener('click', function () { onDelete && onDelete(m); });
-        act.appendChild(ed); act.appendChild(del);
-        box.appendChild(act);
-      } else if (mine && m.audio) {
-        var act2 = document.createElement('div');
-        act2.className = 'chat-msg-actions';
-        var del2 = document.createElement('span'); del2.textContent = '🗑️ मेटाउनुस्';
-        del2.addEventListener('click', function () { onDelete && onDelete(m); });
-        act2.appendChild(del2);
-        box.appendChild(act2);
+
+      var wrap = document.createElement('div');
+      wrap.className = 'chat-bubble-wrap';
+      wrap.appendChild(bubble);
+
+      /* आफ्नै सन्देज भए मात्र, छेउमा ⋮ (सम्पादन/मेटाउनुस्) */
+      if (mine && (onEdit || onDelete)) {
+        var kwrap = document.createElement('div');
+        kwrap.className = 'chat-kebab-wrap';
+        var kbtn = document.createElement('button');
+        kbtn.type = 'button'; kbtn.className = 'chat-kebab'; kbtn.textContent = '⋮';
+        kbtn.setAttribute('aria-label', 'विकल्प');
+        var kmenu = document.createElement('div');
+        kmenu.className = 'chat-kebab-menu';
+        if (!m.audio && onEdit) {
+          var kEdit = document.createElement('button');
+          kEdit.type = 'button'; kEdit.textContent = '✏️ सच्याउनुस्';
+          kEdit.addEventListener('click', function (e) { e.stopPropagation(); closeAllChatKebabs(); onEdit(m); });
+          kmenu.appendChild(kEdit);
+        }
+        if (onDelete) {
+          var kDel = document.createElement('button');
+          kDel.type = 'button'; kDel.className = 'chat-kebab-danger'; kDel.textContent = '🗑️ मेटाउनुस् (Unsend)';
+          kDel.addEventListener('click', function (e) { e.stopPropagation(); closeAllChatKebabs(); onDelete(m); });
+          kmenu.appendChild(kDel);
+        }
+        kbtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var wasOpen = kmenu.classList.contains('open');
+          closeAllChatKebabs();
+          if (!wasOpen) kmenu.classList.add('open');
+        });
+        kwrap.appendChild(kbtn); kwrap.appendChild(kmenu);
+        wrap.appendChild(kwrap);
       }
+
+      row.appendChild(av); row.appendChild(wrap);
+      box.appendChild(row);
     });
     box.scrollTop = box.scrollHeight;
   }
