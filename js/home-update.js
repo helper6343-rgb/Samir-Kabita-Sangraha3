@@ -608,7 +608,10 @@
        app.js को कुनै फाइल नछोइकनै । */
     var alreadyOpen = modal.classList.contains('open');
     var html = '';
-    if (entry.cover) html += '<div class="poem-cover-large"><img src="' + esc(entry.cover) + '" alt="' + esc(entry.title || '') + '"></div>';
+    /* पढ्ने पेजमा (भित्र) छुट्टै फोटो (entry.photo) भए त्यो, नभए (पुराना
+       रचनाहरू, जसमा छुट्टै फोटो छैन) book cover (entry.cover) नै देखाइदिने */
+    var innerPhoto = entry.photo || entry.cover;
+    if (innerPhoto) html += '<div class="poem-cover-large"><img src="' + esc(innerPhoto) + '" alt="' + esc(entry.title || '') + '"></div>';
     html += '<h1 class="poem-title-large">' + esc(entry.title || '') + '</h1>';
     html += '<div class="poem-content">' + esc(entry.text || '') + '</div>';
     body.innerHTML = html;

@@ -31,7 +31,10 @@
       GENRES.map(function (g) { return '<option>' + g + '</option>'; }).join('') +
     '</select>' +
     '<label for="npText">पाठ</label><textarea class="sp-input" id="npText" style="min-height:220px;line-height:1.9"></textarea>' +
-    '<label>कभर फोटो</label>' +
+    '<label>रचनाको फोटो (पढ्ने पेजमा, भित्र)</label>' +
+    '<div class="sp-photo-row"><img id="npInnerPrev" src="" style="border-radius:8px;width:84px;height:48px;object-fit:cover;background:#ddd"><button type="button" id="npInnerBtn">फोटो छान्नुस्</button></div>' +
+    '<input type="file" id="npInnerFile" accept="image/*" hidden>' +
+    '<label>Book cover फोटो (होम पेजमा, बाहिर)</label>' +
     '<div class="sp-photo-row"><img id="npCoverPrev" src="" style="border-radius:8px;width:56px;height:74px;object-fit:cover;background:#ddd"><button type="button" id="npPhotoBtn">फोटो छान्नुस्</button></div>' +
     '<input type="file" id="npPhotoFile" accept="image/*" hidden>' +
     '<button class="sp-btn" id="npSave">प्रकाशित गर्नुस्</button>' +
@@ -43,7 +46,40 @@
   function openOv() { ov.classList.add('sp-open'); }
   function closeOv() { ov.classList.remove('sp-open'); }
   var $ = function (s) { return ov.querySelector(s); };
-  var editingId = null, editingCover = '';
+  var editingId = null, editingCover = '', editingPhoto = '';
+
+  /* ---------- रचनाको फोटो (पढ्ने पेजमा) — simple fit-crop, Cropper चाहिँदैन ---------- */
+  function processInnerPhoto(file, W, H) {
+    return new Promise(function (res, rej) {
+      var url = URL.createObjectURL(file), im = new Image();
+      im.onload = function () {
+        var c = document.createElement('canvas'); c.width = W; c.height = H;
+        var ctx = c.getContext('2d'), r = Math.max(W / im.width, H / im.height);
+        var dw = im.width * r, dh = im.height * r;
+        ctx.drawImage(im, (W - dw) / 2, (H - dh) / 2, dw, dh);
+        URL.revokeObjectURL(url);
+        c.toBlob(function (b) {
+          var fr = new FileReader();
+          fr.onload = function () { res(fr.result.split(',')[1]); };
+          fr.readAsDataURL(b);
+        }, 'image/jpeg', 0.85);
+      };
+      im.onerror = function () { rej(new Error('फोटो खुलेन')); };
+      im.src = url;
+    });
+  }
+  var pendingInnerB64 = null;
+  $('#npInnerBtn').addEventListener('click', function () { $('#npInnerFile').click(); });
+  $('#npInnerFile').addEventListener('change', async function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    try {
+      var b64 = await processInnerPhoto(f, 1280, 720);
+      pendingInnerB64 = b64;
+      $('#npInnerPrev').src = 'data:image/jpeg;base64,' + b64;
+    } catch (e) { toast((e && e.message) || 'फोटो राख्न सकिएन'); }
+  });
 
   /* ---------- Crop overlay (3:4, book cover) ---------- */
   var cropOv = document.createElement('div');
@@ -151,8 +187,16 @@
       var isEdit = !!editingId;
       var id = isEdit ? editingId : ('x' + Date.now().toString(36) + hash(title));
       var cover = isEdit ? editingCover : '';
+      var photo = isEdit ? editingPhoto : '';
+      if (pendingInnerB64) {
+        m.textContent = 'रचनाको फोटो अपलोड हुँदैछ…';
+        var pPath = 'covers/extra-photo/' + id + '.jpg';
+        var pr = await a.put(pPath, pendingInnerB64, (isEdit ? 'Update' : 'New') + ' post photo: ' + title);
+        if (!pr.ok) throw new Error('फोटो अपलोड भएन (' + pr.status + ')');
+        photo = pPath + '?v=' + Date.now();
+      }
       if (pendingBlob) {
-        m.textContent = 'फोटो अपलोड हुँदैछ…';
+        m.textContent = 'Book cover अपलोड हुँदैछ…';
         var b64 = await b64FromBlob(pendingBlob);
         var path = 'covers/book/extra-' + id + '.jpg';
         var r1 = await a.put(path, b64, (isEdit ? 'Update' : 'New') + ' post cover: ' + title);
@@ -161,7 +205,7 @@
       }
       var words = text.split(/\s+/).filter(Boolean).length;
       var minutes = Math.max(1, Math.round(words / 120));
-      var entry = { id: id, title: title, genre: genre, text: text, cover: cover, minutes: minutes, created: isEdit ? undefined : Date.now() };
+      var entry = { id: id, title: title, genre: genre, text: text, cover: cover, photo: photo, minutes: minutes, created: isEdit ? undefined : Date.now() };
 
       m.textContent = 'सेभ हुँदैछ…';
       var ok = false;
@@ -184,8 +228,9 @@
       }
       if (!ok) throw new Error('सेभ भएन, फेरि प्रयास गर्नुस्।');
 
-      $('#npTitle').value = ''; $('#npText').value = ''; $('#npCoverPrev').src = ''; pendingBlob = null;
-      editingId = null; editingCover = '';
+      $('#npTitle').value = ''; $('#npText').value = ''; $('#npCoverPrev').src = ''; $('#npInnerPrev').src = '';
+      pendingBlob = null; pendingInnerB64 = null;
+      editingId = null; editingCover = ''; editingPhoto = '';
       m.textContent = ''; closeOv();
       /* GitHub Pages लाई अपडेट हुन केही समय लाग्छ, त्यसैले फेरि fetch नगरी
          सिधै यहीँ देखाइदिने (optimistic) — फ्ल्यास भएर हराउने समस्या नआओस् */
@@ -201,23 +246,24 @@
   window.SPG_NEWPOST = {
     open: function () {
       if (!admin() || !admin().isLoggedIn()) { toast('पहिले लगइन गर्नुस्'); return; }
-      editingId = null; editingCover = '';
+      editingId = null; editingCover = ''; editingPhoto = '';
       ov.querySelector('h2').textContent = '➕ नयाँ रचना थप्नुस्';
       ov.querySelector('#npSave').textContent = 'प्रकाशित गर्नुस्';
-      $('#npTitle').value = ''; $('#npText').value = ''; $('#npCoverPrev').src = '';
-      $('#npGenre').value = 'कविता'; pendingBlob = null; $('#npMsg').textContent = '';
+      $('#npTitle').value = ''; $('#npText').value = ''; $('#npCoverPrev').src = ''; $('#npInnerPrev').src = '';
+      $('#npGenre').value = 'कविता'; pendingBlob = null; pendingInnerB64 = null; $('#npMsg').textContent = '';
       openOv();
     },
     openEdit: function (entry) {
       if (!admin() || !admin().isLoggedIn()) { toast('पहिले लगइन गर्नुस्'); return; }
-      editingId = entry.id; editingCover = entry.cover || '';
+      editingId = entry.id; editingCover = entry.cover || ''; editingPhoto = entry.photo || '';
       ov.querySelector('h2').textContent = '✏️ रचना सम्पादन';
       ov.querySelector('#npSave').textContent = 'सेभ गर्नुस्';
       $('#npTitle').value = entry.title || '';
       $('#npText').value = entry.text || '';
       $('#npGenre').value = entry.genre || 'कविता';
       $('#npCoverPrev').src = entry.cover || '';
-      pendingBlob = null; $('#npMsg').textContent = '';
+      $('#npInnerPrev').src = entry.photo || entry.cover || '';
+      pendingBlob = null; pendingInnerB64 = null; $('#npMsg').textContent = '';
       openOv();
     }
   };
